@@ -86,14 +86,6 @@ baseline/experience_transfer_experiment/out/**
 !baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/
 !baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/report.md
 !baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/failure_taxonomy.json
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/report.md
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/gated_evolution_summary.json
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/failure_taxonomy.json
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/gate_best_rules.json
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/gate_best_skill.md
-!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/rejected_rules.jsonl
 
 # Translation work: keep reports, manual fixes, and compact metadata; exclude
 # bulky generated batches by default.
@@ -102,3 +94,8 @@ translation_work/outputs/**
 translation_work/manual_fix/**/*.exe
 translation_work/manual_fix/**/*.out
 translation_work/manual_fix/**/*.o
+
+# Candidate architecture/method-matrix experiments are exploration artifacts.
+# Keep final reports only when explicitly moved into a stable release folder.
+translation_work/architecture_experiments/
+translation_work/manual_fix/manual_candidates_*

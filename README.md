@@ -29,9 +29,9 @@ safecodernew/
 │  ├─ experience_transfer_experiment/
 │  │  ├─ run_coset_eagle_experiment.py
 │  │  ├─ test_coset_eagle_experiment.py
+│  │  ├─ final_gated_sample/
 │  │  └─ out/
-│  │     ├─ coset_eagle_self_evolve_30/
-│  │     └─ coset_eagle_gated_30_r2/
+│  │     └─ coset_eagle_self_evolve_30/
 │  ├─ baseline_分析与轻量测试报告.md
 │  └─ 跨语言安全代码生成_baseline与整体实验设计.md
 │
@@ -110,7 +110,10 @@ logs are intentionally excluded from this public repository.
 ## Experience Transfer and Self-Evolution
 
 The folder `baseline/experience_transfer_experiment/` contains the first compact
-implementation of the experience-transfer experiment.
+implementation of the experience-transfer experiment. The older memory/script
+methods are preserved in `run_experiment.py`, `run_llm_memory_experiment.py`,
+and `out/coset_eagle_self_evolve_30/`; only exploratory candidate run dumps were
+removed from the public snapshot.
 
 The experiment compares several memory and experience-use strategies on a
 30-task test set. The strict metric is `Func+Sec`, which means the generated
@@ -131,11 +134,15 @@ Key previous results:
 | `secodeplt_memory` | 16 / 30 |
 | `coset_eagle_clean_evolved` | 17 / 30 |
 
-The newer gated evolution run is stored in:
+The finalized gated evolution sample is stored in:
 
 ```text
-baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/
+baseline/experience_transfer_experiment/final_gated_sample/
 ```
+
+This directory is the stable public record of the successful gated run. Older
+candidate rounds and intermediate method-matrix experiments are intentionally
+excluded from the public snapshot to keep the repository focused.
 
 It adds a Claude-inspired evidence gate:
 
@@ -206,7 +213,10 @@ isolated environment.
 
 ## Current Status
 
-This is the first public migration snapshot. It records:
+This is the first public migration snapshot. It records the stabilized gated
+sample rather than every candidate experiment attempted during exploration.
+
+It includes:
 
 - CodeSecEval data and related method code.
 - Cross-language migration work artifacts.
