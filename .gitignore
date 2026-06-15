@@ -1,0 +1,104 @@
+# Local secrets and environment files
+.env
+.env.*
+*.env
+*.key
+*apikey*
+*api_key*
+secret.txt
+secrets.*
+credentials.*
+
+# Python caches and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments and dependency folders
+venv/
+.venv/
+env/
+Lib/site-packages/
+node_modules/
+
+# OS/editor noise
+.DS_Store
+__MACOSX/
+Thumbs.db
+.idea/
+.vscode/
+
+# Archives and bulky imported packages
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+
+# Local downloaded runtimes, caches, sandboxes, and temporary execution outputs
+translation_work/cache/
+translation_work/downloads/
+translation_work/sandbox/
+translation_work/temp/
+translation_work/logs/
+translation_work/scripts/
+translation_work/**/*.guarded_tmp/
+translation_work/**/*.validated.guarded_tmp/
+translation_work/**/*.validated.*.json
+translation_work/**/*.input.json
+translation_work/**/*.log
+
+# Keep compact reports and curated experiment outputs, but exclude huge local work dirs
+baseline/baseline_test_work/
+baseline/**/venv/
+baseline/**/.venv/
+baseline/**/*.zip
+baseline/**/__pycache__/
+
+# External cloned repos are reference material and can be re-downloaded
+external_repos/
+
+# Local API usage notes may contain private provider examples or screenshots.
+质朴api使用/
+
+# Runtime logs and transient experiment directories
+logs/
+Temp/
+tmp/
+*.tmp
+
+# Large third-party baseline unpacked archives and logs.
+# The public snapshot keeps our analysis docs and compact experience-transfer
+# experiment, not full downloaded baseline packages.
+baseline/codesecevalDatasetAndMethod/
+baseline/SeCodePLT-main/
+baseline/cweval/
+baseline/**/*.log
+baseline/**/*.pdf
+
+# Keep compact experiment code and selected reports, but exclude generated run
+# dumps unless they are the curated first-migration summaries.
+baseline/experience_transfer_experiment/out/**
+!baseline/experience_transfer_experiment/out/
+!baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/
+!baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/report.md
+!baseline/experience_transfer_experiment/out/coset_eagle_self_evolve_30/failure_taxonomy.json
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/report.md
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/gated_evolution_summary.json
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/failure_taxonomy.json
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/gate_best_rules.json
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/gate_best_skill.md
+!baseline/experience_transfer_experiment/out/coset_eagle_gated_30_r2/memory/rejected_rules.jsonl
+
+# Translation work: keep reports, manual fixes, and compact metadata; exclude
+# bulky generated batches by default.
+translation_work/outputs/**
+!translation_work/outputs/
+translation_work/manual_fix/**/*.exe
+translation_work/manual_fix/**/*.out
+translation_work/manual_fix/**/*.o

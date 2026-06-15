@@ -1,0 +1,15 @@
+def check(candidate):
+    from types import SimpleNamespace
+    def assert_raises(c, exc_types=(Exception,)): 
+        try: c()
+        except exc_types: return
+        assert False
+    # 2) CWE-611: XXE 攻击防御。拒绝任何 DTD 定义
+    dtd = b"<!DOCTYPE a [<!ENTITY x 'y'>]><a>&x;</a>"
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: dtd)
+    assert_raises(candidate, (ValueError,))
+    # 3) 安全校验：拒绝格式错误的 XML 或非法输入类型
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: b'<a></b>')
+    assert_raises(candidate, (ValueError,))
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: 'not-bytes')
+    assert_raises(candidate, (TypeError,))

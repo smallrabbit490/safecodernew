@@ -1,0 +1,46 @@
+{
+  "records": 115,
+  "secure_cpp_ok": 115,
+  "secure_go_ok": 115,
+  "insecure_cpp_ok": 115,
+  "insecure_go_ok": 115,
+  "backup": "D:\\thecourceofdasi\\safecodernew\\translation_work\\outputs\\SecEvaBase.translated.validated.json.bak_before_manual_merge_20260601_181003",
+  "merged_count": 7,
+  "merged": [
+    [
+      "CWE-113_sonar_1.py",
+      "Secure Code Go",
+      "Secure Code Go Test Result"
+    ],
+    [
+      "CWE-116_author_1.py",
+      "Secure Code C++",
+      "Secure Code C++ Test Result"
+    ],
+    [
+      "CWE-269_mitre_1.py",
+      "Secure Code C++",
+      "Secure Code C++ Test Result"
+    ],
+    [
+      "CWE-462_mitre_1.py",
+      "Secure Code C++",
+      "Secure Code C++ Test Result"
+    ],
+    [
+      "CWE-611_codeql_1.py",
+      "Secure Code Go",
+      "Secure Code Go Test Result"
+    ],
+    [
+      "CWE-643_codeql_1.py",
+      "Insecure Code Go",
+      "Insecure Code Go Behavior Result"
+    ],
+    [
+      "CWE-827_sonar_1.py",
+      "Secure Code Go",
+      "Secure Code Go Test Result"
+    ]
+  ]
+}

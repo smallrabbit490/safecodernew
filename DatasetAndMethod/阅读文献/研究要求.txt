@@ -1,0 +1,5 @@
+两位同学读一下这两篇文章，函数级别安全代码生成：CWEval，SecCodePLT
+
+SecCodePLT：https://openreview.net/pdf?id=vbr63iQsbv
+
+NIPS26年，提出了一个安全代码生成数据集的自动化构建框架

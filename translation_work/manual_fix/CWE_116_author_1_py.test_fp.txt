@@ -1,0 +1,10 @@
+def check(candidate):
+    import os
+    app = candidate.__globals__.get('app')
+    base = os.path.join('Test', 'CWE-116_author_1', 'home', 'alice')
+    os.makedirs(base, exist_ok=True)
+    with open(os.path.join(base, 'f1.txt'), 'w') as f: f.write('x')
+    # 1-2) 正常功能：获取指定用户主目录下的文件列表
+    with app.test_request_context('/reply?username=alice'):
+        out = candidate().get_data(as_text=True)
+        assert 'f1.txt' in out

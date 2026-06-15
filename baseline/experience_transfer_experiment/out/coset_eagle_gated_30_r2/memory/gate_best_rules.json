@@ -1,0 +1,642 @@
+[
+  {
+    "rule_name": "Regex Backtracking Prevention",
+    "principle": "Regular expressions must be constrained with specific character classes and bounded quantifiers to prevent catastrophic backtracking on malicious or malformed input.",
+    "when_to_apply": [
+      "regex pattern matching",
+      "input validation via regex",
+      "string parsing"
+    ],
+    "implementation_hint": "Replace overly permissive greedy patterns like `.+` or `.*` with restrictive character classes such as `[^<delimiter>]+` to ensure linear parsing time and prevent exponential state exploration.",
+    "avoid": "Using unbounded greedy wildcards (e.g., `.*` or `.+`) in the middle of regex patterns, especially when followed by additional matching criteria.",
+    "evidence": [
+      "secodeplt-45",
+      "secodeplt-46"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Safe Deserialization",
+    "principle": "Insecure deserialization formats that allow arbitrary code execution must be strictly blocked, favoring safe, data-only formats or explicit rejection.",
+    "when_to_apply": [
+      "object deserialization",
+      "data unmarshalling",
+      "processing serialized payloads"
+    ],
+    "implementation_hint": "Prohibit the use of unsafe deserializers (like `pickle`, `yaml.load`) entirely. Replace them with safe alternatives (like `json`) or raise an explicit error if an unsafe format is requested.",
+    "avoid": "Passing untrusted or externally controlled data to deserializers that can reconstruct arbitrary objects or execute code.",
+    "evidence": [
+      "secodeplt-594",
+      "secodeplt-595"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Destination Allowlisting for Redirects",
+    "principle": "Redirect and fetch targets must be validated against a strict allowlist of authorized domains to prevent open redirects and Server-Side Request Forgery (SSRF).",
+    "when_to_apply": [
+      "URL redirection",
+      "outbound HTTP requests",
+      "link generation"
+    ],
+    "implementation_hint": "Parse the absolute URL, extract the hostname or netloc, and verify it exactly matches the base domain or exists in a predefined allowlist before executing the redirect or request.",
+    "avoid": "Redirecting users or making server-side requests to URLs derived directly from untrusted input without domain validation.",
+    "evidence": [
+      "secodeplt-639",
+      "secodeplt-640",
+      "secodeplt-1080",
+      "secodeplt-1081"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Output Encoding for Contextual XSS Prevention",
+    "principle": "All user-supplied data must be contextually encoded or escaped before being rendered in HTML to prevent Cross-Site Scripting (XSS).",
+    "when_to_apply": [
+      "rendering HTML templates",
+      "DOM manipulation",
+      "displaying user-generated content"
+    ],
+    "implementation_hint": "Apply standard library HTML escaping (e.g., converting `<`, `>`, `&`, `\"`, `'` to entities) to all dynamic variables before interpolating them into HTML markup or template strings.",
+    "avoid": "Directly concatenating or interpolating untrusted input into HTML strings, template formats, or DOM APIs without escaping.",
+    "evidence": [
+      "secodeplt-963",
+      "secodeplt-964"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "AST Validation for Dynamic Execution",
+    "principle": "Dynamic code execution must be preceded by structural validation to ensure the code contains only safe, permitted operations.",
+    "when_to_apply": [
+      "eval/exec functions",
+      "dynamic code evaluation",
+      "sandboxing user scripts"
+    ],
+    "implementation_hint": "Parse the code into an Abstract Syntax Tree (AST), walk the tree, and reject the execution if it contains forbidden node types (e.g., imports, function definitions, or arbitrary function calls).",
+    "avoid": "Passing raw, unvalidated user strings directly to `eval()`, `exec()`, or equivalent dynamic execution functions.",
+    "evidence": [
+      "secodeplt-1125",
+      "secodeplt-1126"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Cryptographic Verification",
+    "principle": "Cryptographic signatures or authentication tokens must be explicitly verified against expected values before trusting or processing the associated data.",
+    "when_to_apply": [
+      "signature verification",
+      "token validation",
+      "API authentication"
+    ],
+    "implementation_hint": "Compare the provided signature or token against a securely stored expected value using a constant-time comparison function; reject the input immediately if the check fails.",
+    "avoid": "Assuming data is valid based on its presence, format, or by returning a hardcoded `True` without performing actual cryptographic verification.",
+    "evidence": [
+      "secodeplt-423",
+      "secodeplt-424"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Path Traversal Containment",
+    "principle": "File system paths constructed from untrusted input must be resolved and validated to ensure they remain strictly within an intended base directory.",
+    "when_to_apply": [
+      "file system access",
+      "path construction",
+      "reading/writing user files"
+    ],
+    "implementation_hint": "Resolve the constructed path to its absolute form and verify that it starts with the resolved base directory path, raising an error if the resolved path escapes the sandbox.",
+    "avoid": "Directly concatenating untrusted input with base directory paths without resolving `..` sequences or symbolic links, which allows directory traversal.",
+    "evidence": [
+      "secodeplt-180",
+      "secodeplt-181"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Shell Command Parameterization",
+    "principle": "External commands must be invoked using parameterized arrays rather than shell string interpolation to prevent command injection.",
+    "when_to_apply": [
+      "subprocess execution",
+      "system commands",
+      "shell scripting wrappers"
+    ],
+    "implementation_hint": "Pass command arguments as a list of strings to process execution APIs (e.g., `subprocess.run`) without enabling shell interpretation (`shell=False`).",
+    "avoid": "Using string interpolation or formatting to build command strings passed to `os.system()` or shell-enabled subprocess calls.",
+    "evidence": [
+      "secodeplt-918",
+      "secodeplt-919"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Secure XML Parsing Configuration",
+    "principle": "XML parsers must be explicitly configured or replaced with secure equivalents to disable the resolution of external entities and prevent XXE attacks.",
+    "when_to_apply": [
+      "XML parsing",
+      "SOAP processing",
+      "SVG/XML document handling"
+    ],
+    "implementation_hint": "Use inherently safe XML parsing libraries (like `defusedxml`) or explicitly configure standard parsers to disable external entity resolution and DTD loading.",
+    "avoid": "Using default XML parser configurations that have entity resolution enabled, allowing the parser to fetch external resources or read local files.",
+    "evidence": [
+      "secodeplt-684",
+      "secodeplt-685"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 1
+  },
+  {
+    "rule_name": "Enforce Secure TLS/SSL Configuration",
+    "principle": "Always establish network connections using secure contexts that enforce strict certificate and hostname verification.",
+    "when_to_apply": [
+      "network connection",
+      "SMTP",
+      "HTTPS",
+      "TLS",
+      "SSL",
+      "socket"
+    ],
+    "implementation_hint": "Instead of calling connection or upgrade methods with default or no parameters, explicitly create a secure context (e.g., SSLContext) configured to verify the server's certificate chain and hostname, and pass it to the connection method.",
+    "avoid": "Using default connection methods without explicitly providing a secure context, which often results in disabled or lenient certificate validation.",
+    "evidence": [
+      "secodeplt-288",
+      "secodeplt-289"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Enforce Resource Consumption Limits",
+    "principle": "Strictly limit the size of user-provided data and the quantity of items processed or stored to prevent resource exhaustion.",
+    "when_to_apply": [
+      "file upload",
+      "data queue",
+      "cache insertion",
+      "unbounded loop",
+      "resource allocation"
+    ],
+    "implementation_hint": "Define explicit maximum limits for data size (e.g., max bytes) and collection length (e.g., max queue size). Check these bounds before processing or storing data, and reject the request if the limits are exceeded.",
+    "avoid": "Processing or storing data without checking its size or the current capacity of the storage mechanism, leading to potential memory exhaustion.",
+    "evidence": [
+      "secodeplt-549",
+      "secodeplt-550",
+      "secodeplt-873",
+      "secodeplt-874"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Filter Sensitive Data from Output",
+    "principle": "Prevent unauthorized exposure of sensitive information by explicitly filtering or redacting it before rendering reports or returning data.",
+    "when_to_apply": [
+      "report generation",
+      "data formatting",
+      "API response",
+      "logging",
+      "sensitive fields"
+    ],
+    "implementation_hint": "Use proxy objects, data transfer objects (DTOs), or explicit allow-lists to expose only non-sensitive attributes. Block access to internal sensitive fields (like diagnosis, SSN, passwords) during the data serialization or formatting process.",
+    "avoid": "Passing raw domain objects directly to formatters, templates, or APIs, which may inadvertently expose all object attributes including sensitive ones.",
+    "evidence": [
+      "secodeplt-135",
+      "secodeplt-136"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Use Exact String Matching for Command Authorization",
+    "principle": "Validate user-supplied commands or inputs against an allow-list using exact matching to prevent injection attacks.",
+    "when_to_apply": [
+      "command execution",
+      "input validation",
+      "allow-list",
+      "system call",
+      "subprocess"
+    ],
+    "implementation_hint": "Check if the entire user input string exactly matches one of the allowed values (e.g., using strict equality or set membership) rather than checking if allowed values appear as substrings within the input.",
+    "avoid": "Using substring or partial matching (e.g., `if allowed_cmd in user_input`) to validate commands, as attackers can embed malicious payloads alongside the allowed substring.",
+    "evidence": [
+      "secodeplt-774",
+      "secodeplt-775"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Canonicalize Input Before Validation",
+    "principle": "Always decode and canonicalize user input before applying security validations to prevent encoding-based bypasses.",
+    "when_to_apply": [
+      "path traversal",
+      "file access",
+      "URL handling",
+      "input validation",
+      "encoding"
+    ],
+    "implementation_hint": "Apply the appropriate decoding mechanisms (e.g., URL decoding, HTML entity decoding) to resolve the input to its simplest form. Then, validate the canonicalized input against security rules and check for dangerous patterns (like `..`).",
+    "avoid": "Validating raw, encoded user input directly, which allows attackers to use encoding schemes (like `%2e%2e`) to bypass pattern-matching security controls.",
+    "evidence": [
+      "secodeplt-90",
+      "secodeplt-91"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Enforce Authorization Checks on Data Access",
+    "principle": "Verify that the requesting user is authorized to access the specific resource before returning sensitive data.",
+    "when_to_apply": [
+      "data access",
+      "profile view",
+      "API endpoint",
+      "authorization",
+      "IDOR"
+    ],
+    "implementation_hint": "Implement access control checks that ensure the user owns the requested resource or holds an elevated role (e.g., admin). Deny access with an appropriate error if the check fails.",
+    "avoid": "Retrieving and returning data based solely on a resource identifier provided by the user without verifying the user's relationship to that data.",
+    "evidence": [
+      "secodeplt-1008",
+      "secodeplt-1009"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Avoid Dynamic Code Execution",
+    "principle": "Never use dynamic code execution functions on untrusted input; use safe parsing and structured evaluation instead.",
+    "when_to_apply": [
+      "eval",
+      "exec",
+      "dynamic query",
+      "code injection",
+      "expression evaluation"
+    ],
+    "implementation_hint": "Replace dynamic execution functions (like `eval` or `exec`) with secure parsers, regex validation, or structured query builders that safely construct logic without executing raw strings as code.",
+    "avoid": "Passing concatenated, untrusted strings directly into language-level execution functions, which allows attackers to execute arbitrary code.",
+    "evidence": [
+      "secodeplt-828",
+      "secodeplt-829"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 2
+  },
+  {
+    "rule_name": "Input Size Limitation",
+    "principle": "Enforce strict size limits on all untrusted inputs to prevent resource exhaustion and denial-of-service attacks.",
+    "when_to_apply": [
+      "reading network data",
+      "parsing user input",
+      "buffer allocation",
+      "file uploads"
+    ],
+    "implementation_hint": "Check the length or size of the incoming data against a defined maximum limit before processing or allocating memory for it; reject immediately if exceeded.",
+    "avoid": "Processing arbitrarily large inputs without validation or allocating buffers based on untrusted size parameters.",
+    "evidence": [
+      "secodeplt-0",
+      "secodeplt-1"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Strict Command Allowlisting",
+    "principle": "Validate untrusted inputs against a strict allowlist of exact permitted values rather than searching for allowed substrings within the input.",
+    "when_to_apply": [
+      "command execution",
+      "input routing",
+      "dynamic dispatch",
+      "configuration selection"
+    ],
+    "implementation_hint": "Compare the full, normalized untrusted string directly against an exhaustive list of safe, expected values using exact match equality.",
+    "avoid": "Using substring matching or partial containment checks on user input to determine if an operation is safe.",
+    "evidence": [
+      "secodeplt-776"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Safe Code Evaluation",
+    "principle": "Never execute dynamically constructed code from untrusted sources; use safe parsing and evaluation mechanisms with strict node or operation allowlists.",
+    "when_to_apply": [
+      "dynamic queries",
+      "expression evaluation",
+      "script execution",
+      "template rendering"
+    ],
+    "implementation_hint": "Parse the input into an Abstract Syntax Tree (AST) or structured intermediate representation, then traverse it to ensure only safe, pre-defined operations are permitted before execution.",
+    "avoid": "Passing untrusted strings directly to eval(), exec(), or similar dynamic code execution functions.",
+    "evidence": [
+      "secodeplt-1170",
+      "secodeplt-1171",
+      "secodeplt-830"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Path Traversal Prevention",
+    "principle": "Always resolve and confine file system paths to a designated secure base directory to prevent unauthorized access outside the intended scope.",
+    "when_to_apply": [
+      "file access",
+      "directory traversal",
+      "resource loading",
+      "path handling"
+    ],
+    "implementation_hint": "Resolve the requested path to its absolute form and verify that it starts with or is relative to the resolved base directory; reject the access if it escapes the base.",
+    "avoid": "Directly concatenating or using untrusted input in file paths without canonicalization and boundary verification.",
+    "evidence": [
+      "secodeplt-182"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Ownership Verification for Destructive Actions",
+    "principle": "Verify resource ownership or explicit permissions before performing destructive or modifying operations to prevent unauthorized interference.",
+    "when_to_apply": [
+      "file deletion",
+      "resource modification",
+      "state transitions"
+    ],
+    "implementation_hint": "Check the user ID, role, or ownership attributes of the target resource against the current session's identity before executing the destructive action.",
+    "avoid": "Deleting or modifying resources based solely on their existence or a user-supplied identifier without verifying ownership.",
+    "evidence": [
+      "secodeplt-243",
+      "secodeplt-244"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Strong Cryptography Enforcement",
+    "principle": "Restrict cryptographic operations to a predefined list of modern, secure algorithms and reject requests to use weak or deprecated ones.",
+    "when_to_apply": [
+      "password hashing",
+      "data encryption",
+      "digital signatures",
+      "token generation"
+    ],
+    "implementation_hint": "Maintain an explicit allowlist of approved cryptographic algorithms and validate the requested algorithm against it before performing the operation.",
+    "avoid": "Using or allowing user-selectable weak algorithms like MD5, SHA1, or DES for security-critical operations.",
+    "evidence": [
+      "secodeplt-333",
+      "secodeplt-334"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Anti-CSRF Verification",
+    "principle": "Validate anti-forgery tokens for state-changing requests to ensure the action was intentionally initiated by the authenticated user.",
+    "when_to_apply": [
+      "state-changing HTTP requests",
+      "form submissions",
+      "API mutations"
+    ],
+    "implementation_hint": "Extract a CSRF token from the request headers or body and compare it securely against the expected server-side token; reject the request if missing or mismatched.",
+    "avoid": "Processing state-changing requests based solely on session cookies without verifying a secondary token tied to the origin.",
+    "evidence": [
+      "secodeplt-468",
+      "secodeplt-469"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Race Condition Mitigation via Atomic Operations",
+    "principle": "Use atomic operations or proper locking mechanisms when checking a resource state and subsequently acting upon it to prevent race conditions.",
+    "when_to_apply": [
+      "file system checks",
+      "concurrent resource access",
+      "time-of-check to time-of-use (TOCTOU) scenarios"
+    ],
+    "implementation_hint": "Acquire exclusive locks on the resource before checking its state, perform the operation, and then release the lock, ensuring no other process can alter the state in between.",
+    "avoid": "Checking a resource's state (e.g., file exists) and then acting on it in separate, non-atomic steps without synchronization.",
+    "evidence": [
+      "secodeplt-504",
+      "secodeplt-505"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Authorization Checks Before Mutation",
+    "principle": "Enforce explicit authorization checks to verify the actor has the required role or ownership before allowing any data mutation.",
+    "when_to_apply": [
+      "data updates",
+      "privileged operations",
+      "resource modifications"
+    ],
+    "implementation_hint": "Retrieve the actor's role and/or ID and compare it against the resource's access control list or owner ID; abort the operation if unauthorized.",
+    "avoid": "Allowing data modifications based solely on possessing the resource identifier without verifying the actor's rights.",
+    "evidence": [
+      "secodeplt-1215",
+      "secodeplt-1216"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Mass Assignment Prevention",
+    "principle": "Explicitly filter and apply only permitted fields from untrusted input when updating data structures to prevent unauthorized field modification.",
+    "when_to_apply": [
+      "object updates",
+      "ORM mapping",
+      "API payload processing"
+    ],
+    "implementation_hint": "Iterate over the incoming key-value pairs and apply updates only if the key exists in a predefined allowlist of permitted fields; ignore or reject all others.",
+    "avoid": "Blindly merging or updating an entire untrusted dictionary/object into a data model (e.g., using object.update(data)).",
+    "evidence": [
+      "secodeplt-1053",
+      "secodeplt-1054"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Shell Command Injection Prevention",
+    "principle": "Execute external commands using argument arrays rather than shell strings to prevent shell metacharacter injection.",
+    "when_to_apply": [
+      "subprocess execution",
+      "system commands",
+      "script invocation"
+    ],
+    "implementation_hint": "Pass command and arguments as a list of strings to process execution APIs without enabling shell interpretation (e.g., shell=False).",
+    "avoid": "Passing untrusted data into shell command strings or using execution APIs with shell=True.",
+    "evidence": [
+      "secodeplt-920"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 3
+  },
+  {
+    "rule_name": "Output Encoding and Sanitization",
+    "principle": "All user-supplied or untrusted inputs must be contextually encoded or sanitized before being rendered or interpolated into output structures.",
+    "when_to_apply": [
+      "HTML rendering",
+      "string formatting",
+      "template interpolation",
+      "dynamic query generation"
+    ],
+    "implementation_hint": "Use standard library encoding functions (e.g., HTML escaping) appropriate for the output context. Never interpolate raw untrusted data directly into format strings or templates.",
+    "avoid": "Directly concatenating or formatting untrusted input into output strings without escaping (e.g., f-strings, .format() with raw user data).",
+    "evidence": [
+      "secodeplt-965"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Safe Code Execution",
+    "principle": "Dynamic execution of untrusted code must be preceded by strict structural validation using an Abstract Syntax Tree (AST) parser to explicitly allowlist safe operations.",
+    "when_to_apply": [
+      "eval()",
+      "exec()",
+      "dynamic scripting",
+      "code evaluation",
+      "REPL inputs"
+    ],
+    "implementation_hint": "Parse the input string into an AST, walk the tree, and raise an error if any node type outside an explicit allowlist (like basic arithmetic or variable assignment) is encountered, prior to execution.",
+    "avoid": "Passing untrusted strings directly to eval() or exec() without structural analysis.",
+    "evidence": [
+      "secodeplt-1127",
+      "secodeplt-1172"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Resource Size Limitation",
+    "principle": "All incoming data and processed resources must be bounded by strict size or length limits to prevent denial-of-service via resource exhaustion.",
+    "when_to_apply": [
+      "file uploads",
+      "HTTP headers",
+      "string processing",
+      "array allocation",
+      "loop iterations"
+    ],
+    "implementation_hint": "Define explicit maximum limits (e.g., bytes, character count, item count) and validate the resource size before or during processing, aborting if the limit is exceeded.",
+    "avoid": "Processing arbitrarily large inputs or allocating memory/buffers based solely on untrusted length specifiers without upper bounds.",
+    "evidence": [
+      "secodeplt-2",
+      "secodeplt-551",
+      "secodeplt-875"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Path Canonicalization and Validation",
+    "principle": "File paths must be canonicalized and resolved before validation to neutralize encoding tricks and directory traversal attempts.",
+    "when_to_apply": [
+      "file access",
+      "path validation",
+      "directory traversal prevention",
+      "resource resolution"
+    ],
+    "implementation_hint": "Decode URL-encoded or escaped characters, resolve the absolute real path, and then verify it against the intended base directory or a strict allowlist pattern.",
+    "avoid": "Validating raw, un-canonicalized path strings or using simple regex matching that can be bypassed by '../' or encoding mechanisms.",
+    "evidence": [
+      "secodeplt-92"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Sensitive Data Filtering",
+    "principle": "Data structures exposed to unauthorized contexts must be filtered or proxied to explicitly block access to sensitive fields.",
+    "when_to_apply": [
+      "API responses",
+      "report generation",
+      "logging",
+      "data serialization"
+    ],
+    "implementation_hint": "Implement wrapper classes or mapping functions that intercept attribute/key access and raise errors or redact fields that are marked as sensitive.",
+    "avoid": "Passing entire raw objects or records directly into templates, logs, or API responses without stripping sensitive properties.",
+    "evidence": [
+      "secodeplt-137"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Ownership and Authorization Checks",
+    "principle": "Destructive or sensitive operations must verify that the requesting entity owns or is explicitly authorized to act upon the target resource.",
+    "when_to_apply": [
+      "file deletion",
+      "resource modification",
+      "profile access",
+      "data mutation"
+    ],
+    "implementation_hint": "Compare the user ID or role of the acting entity against the owner/ACL of the target resource before executing the operation.",
+    "avoid": "Performing actions on resources based solely on resource identifiers provided by the user without verifying their right to access it.",
+    "evidence": [
+      "secodeplt-245",
+      "secodeplt-1010"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Secure Communication Channels",
+    "principle": "Network connections must enforce secure transport layer configurations with proper certificate and hostname verification.",
+    "when_to_apply": [
+      "TLS/SSL connections",
+      "SMTP",
+      "HTTPS requests",
+      "database connections"
+    ],
+    "implementation_hint": "Use the environment's default secure context (e.g., ssl.create_default_context()) when establishing connections rather than relying on default or insecure parameters.",
+    "avoid": "Initiating encrypted connections without explicitly providing a secure context or disabling certificate verification.",
+    "evidence": [
+      "secodeplt-290"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Strong Cryptographic Primitives",
+    "principle": "Cryptographic operations must use modern, industry-standard algorithms and reject weak, deprecated, or broken alternatives.",
+    "when_to_apply": [
+      "hashing",
+      "encryption",
+      "random number generation",
+      "key derivation"
+    ],
+    "implementation_hint": "Maintain an explicit allowlist of approved cryptographic algorithms (e.g., SHA-256, AES-GCM) and validate that requested algorithms are on the list before processing.",
+    "avoid": "Using weak algorithms like MD5, SHA1, or allowing arbitrary algorithm selection from untrusted input.",
+    "evidence": [
+      "secodeplt-327"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  },
+  {
+    "rule_name": "Cryptographic Randomness",
+    "principle": "Security-sensitive random values must be generated using a cryptographically secure pseudo-random number generator (CSPRNG).",
+    "when_to_apply": [
+      "token generation",
+      "password creation",
+      "session IDs",
+      "verification codes"
+    ],
+    "implementation_hint": "Use language-specific cryptographically secure modules (e.g., secrets instead of random) to ensure high entropy and unpredictability.",
+    "avoid": "Using standard PRNGs (like random module) which are predictable and unsuitable for security contexts.",
+    "evidence": [
+      "secodeplt-380"
+    ],
+    "source": "llm_distilled_secodeplt",
+    "chunk": 4
+  }
+]

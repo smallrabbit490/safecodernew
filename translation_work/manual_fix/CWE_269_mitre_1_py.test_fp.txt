@@ -1,0 +1,5 @@
+def check(candidate):
+    import os
+    candidate.__globals__.update({'raisePrivileges': lambda: None, 'lowerPrivileges': lambda: None, 'invalidUsername': lambda u: False})
+    # 1) 正常功能：在合法情况下成功创建目录并返回 True
+    assert candidate('alice') is True

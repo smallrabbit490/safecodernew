@@ -1,0 +1,17 @@
+def check(candidate):
+    import os
+    def assert_raises(c, exc_types=(Exception,)): 
+        try: c()
+        except exc_types: return
+        assert False
+    base = os.path.join('Test', 'CWE-827_sonar_1', 'resources'); os.makedirs(base, exist_ok=True)
+    cwd = os.getcwd(); os.chdir(os.path.dirname(base))
+    try:
+        # 2) CWE-827/CWE-611: XXE 漏洞防御。拒绝带 DTD 的 XML 文件
+        with open('resources/c.xml', 'wb') as f: 
+            f.write(b"<!DOCTYPE a [<!ENTITY x 'y'>]><c/>")
+        assert_raises(candidate, (ValueError,))
+        # 3) 安全校验：异常 XML 结构拦截
+        with open('resources/c.xml', 'wb') as f: f.write(b'<c>')
+        assert_raises(candidate, (ValueError,))
+    finally: os.chdir(cwd)

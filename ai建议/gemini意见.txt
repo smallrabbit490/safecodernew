@@ -1,0 +1,114 @@
+这份 `run_coset_eagle_experiment.py` 脚本的设计非常扎实，尤其是在**学术严谨性（防数据泄漏）\**和\**多 Baseline 对齐工程**上做了深思熟虑的设计。通过区分 `coset_eagle`（允许看测试反馈）和 `coset_eagle_clean`（纯洁净主线），为论文构筑了非常强大的消融说服力。
+
+为了让这个系统从“功能完备的实验脚本”进化为“无懈可击的顶会级 Agent 架构”，以下从**代码层面**和**逻辑层面**为你进行深度拆解并提出针对性建议：
+
+## 一、 代码层面（Code-Level Analysis & Optimization）
+
+### 1. 静态自检（`static_self_check`）中的“语义割裂”抗特征能力差
+
+- **问题分析**：代码虽然引入了 `ast.parse(code)` 来捕获语法错误和验证入口点（Entry Point），但在后续检查高危 API（如 `shell=True`、`pickle.loads`、`eval`）时，**直接退化回了原始的字符串正则匹配（Regex）**：
+
+  Python
+
+  ```
+  if "shell" in checks and re.search(r"shell\s*=\s*true|os\.system|popen\s*\(", lower):
+  ```
+
+  这种做法非常脆弱：如果模型生成的代码中包含了注释（例如 `# Ensure shell=True is NOT used`）或字符串常量，正则会产生**误报（False Positive）**；如果模型写成了 `subprocess.Popen(cmd, {"shell": True})` 或者利用了换行，正则会产生**漏报（False Negative）**。
+
+- **重构建议**：既然已经解析了 AST，应当彻底利用 `ast.NodeVisitor` 来做精准的静态合规扫描。
+
+  Python
+
+  ```
+  class SecurityVisitor(ast.NodeVisitor):
+      def __init__(self):
+          self.issues = []
+      def visit_Call(self, node):
+          # 精准检测 eval, exec
+          if isinstance(node.func, ast.Name) and node.func.id in ['eval', 'exec']:
+              self.issues.append(f"Dangerous dynamic execution API '{node.func.id}' detected.")
+          # 精准检测 subprocess 的 shell=True
+          if isinstance(node.func, ast.Attribute) and node.func.attr in ['Popen', 'run']:
+              for kw in node.keywords:
+                  if kw.arg == 'shell' and isinstance(kw.value, ast.Constant) and kw.value.value is True:
+                      self.issues.append("Potential shell injection: 'shell=True' detected in subprocess call.")
+          self.generic_visit(node)
+  ```
+
+### 2. 硬编码启发式规则导致的“基准过拟合（Overfitting to Benchmark）”
+
+- **问题分析**：在 `static_self_check` 中，存在极具特定题目针对性的硬编码逻辑：
+
+  Python
+
+  ```
+  if "whitespace" in problem_lower and "ast.parse" in lower:
+      if re.search(r"ast\.parse\s*\(\s*expression\s*,", code):
+          issues.append("Problem allows whitespace...")
+  ```
+
+  这种高内聚的硬编码暴露了该系统是在针对 `CodeSecEval` 里的某些特定题目（如某几道关于表达式解析的 CWE 任务）进行“定制化打补丁”。投递顶会时，审稿人一旦查阅源码，会强烈质疑系统是否通过**人工硬编码启发式规则来作弊（Rule Overfitting）**。
+
+- **重构建议**：将这类特定行为防御抽象为 `Failure Atlas` 或规则库中的一条 `Skill Card`。静态检查脚本只负责暴露通用错误，而这种“题目意图与 API 不匹配”的逻辑应交由大模型作为 `Self-Reflection` 智能体动态去发现，不要写死在底层工程代码里。
+
+## 二、 逻辑层面（Logic-Level Analysis & Architectural Evolution）
+
+### 1. 洁净轨道（`clean`）陷入“盲修盲动”死循环陷阱
+
+- **问题分析**：这是当前 `clean=True` 机制中**最致命的逻辑漏洞**。
+
+  请看 `run_coset_eagle_variant` 中的这段修复循环：
+
+  Python
+
+  ```
+  final_self = static_self_check(task, code, checklist)
+  final_eval = evaluate_code(task, code) if final_self["ok"] else None
+  ...
+  if final_self["ok"] and final_eval and final_eval["fun_sec"]:
+      break # 两轨全过，退出
+  ```
+
+  如果代码的**语法完全正确，且没有触发高危 API**（即 `final_self["ok"] == True`，`issues = []`），但是它的**业务逻辑写错了，或者安全防护漏掉了**，导致沙盒测试失败（`final_eval["fun_sec"] == False`）。
+
+  接下来系统会进入 `build_repair_prompt_clean`：
+
+  Python
+
+  ```
+  repair_prompt = build_repair_prompt_clean(task, code, checklist, final_self, None)
+  ```
+
+  此时，传入的 `final_self` 是 `{"ok": true, "issues": []}`，而 `test_result` 被强制传了 `None`。这意味着：**Repair Agent 接收到的反馈是一片空白（没有任何报错信息），同时它又被强制要求必须对代码进行修复！**
+
+- **带来的后果**：在 `clean` 模式下，一旦代码通过了浅显的静态检查但没通过真实测试，Agent 就会变成“瞎子”，在接下来的 `repair_iters` 循环中，它由于不知道错在哪里，只会盲目地乱改代码，或者不断原地复读，造成严重的 Token 浪费和性能大幅衰退。
+
+- **演进建议**：洁净模式虽然不能暴露测试集的具体输入输出（防止泄漏），但**不代表不能暴露编译器的报错或静态语言的语义分析（Semantic Linting）结果**。应当在代码测试失败时，捕获运行时的编译错误（如 Python Runtime 抛出的 `ValueError`、`IndexError` 的异常类名，但隐去具体的断言差异值），将其作为非泄漏的反馈（Non-leaky Feedback）喂给 Repair Prompt。
+
+### 2. “自进化机制（Self-Evolution）”处于离线断层状态
+
+- **问题分析**：虽然你的汇报中将该脚本定义为“自进化机制”，但纵观整段代码，它对知识库/规则库（`llm_evolved_rules.json`）的操作**只有只读的 `load_seed_rules()` 和 `retrieve_rules()`**。
+
+  整个系统在经历 30 到 200 个任务的动态修复、成败摩擦后，**没有任何代码逻辑负责将成功的修复经验、新发现的失败模式（Failure Atlas）写回到规则库中**。这不叫“自进化（Self-Evolution）”，这只是一个“基于静态规则检索的 RAG + 多轮修复 Agent”。
+
+- **演进建议**：必须在全量测试完成后（或者在一个 Batch 结束后），引入 **`Skill Condensation / Memory Consolidation`（记忆固化）** 阶段：
+
+  Plaintext
+
+  ```
+  [任务运行结束] ──> 筛选出 [初始生成失败 ──> 经过 Repair 最终成功] 的经典案例
+                 ──> 启动 Reflection 智能体：分析到底是什么契机导致了修补成功？
+                 ──> 提炼成新的 Skill Card ──> 写入 llm_evolved_rules.json ──> 完成进化闭环
+  ```
+
+### 3. Checklist 的非确定性衰减
+
+- **问题分析**：在 `build_contract_checklist_clean` 中，你们调用了 `infer_security_checks(task, rules)`。该函数将硬编码的 CWE 字典与检索出的 `rules[:5]` 的文本混合在一起，吐出前 8 条。由于大模型生成的 `rules` 里面的 `principle` 字段长度、颗粒度极度不均，直接当作 Checklist 的 Bullet Points 喂给模型，会导致生成的约束列表忽长忽短、语义重叠。
+- **演进建议**：引入一个标准的 Checklist 编译器（Prompt 拦截器），把原始文本规则统一格式化为声明式的（Declarative）强约束契约（如：“1. 输入边界：必须验证长度；2. 内存安全：禁止...”），提升多语言迁移时的稳定性。
+
+## 三、 总结
+
+这份脚本的骨架（工程流、并发、多 Baseline 动态切换、洁净度隔离）已经达到了极高水准。当前最核心的改动点在于**打通 `clean` 轨道的隐式反馈闭环（拒绝盲目修复）**，以及**真正落地规则库的写回与晋升机制（让进化真实发生）**。
+
+在目前的 `clean` 主线中，为了解决“盲修盲动”问题，如果我们在不泄漏测试集具体 Payload 的前提下，允许系统收集并反馈标准编译器/解释器的错误类型（例如：`Test failed due to: TypeError at line 12`），你认为这是否会触碰审稿人对于“数据泄漏（Data Leakage）”的评判红线？

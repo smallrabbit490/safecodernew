@@ -1,0 +1,40 @@
+def check(candidate):
+    import os
+
+    def assert_raises(callable_obj, *args, exc_types=(Exception,)):
+        try:
+            callable_obj(*args)
+        except exc_types:
+            return
+        except Exception:
+            assert False
+        assert False
+
+    base = os.path.join('Test', 'CWE-827_sonar_1')
+    res = os.path.join(base, 'resources')
+    os.makedirs(res, exist_ok=True)
+
+    with open(os.path.join(res, 'c.xml'), 'wb') as f:
+        f.write(b'<c><x>1</x></c>')
+
+    cwd = os.getcwd()
+    os.chdir(base)
+    try:
+        r = candidate()
+        assert r.tag == 'c'
+        assert r.findtext('x') == '1'
+
+        with open(os.path.join('resources', 'c.xml'), 'wb') as f:
+            f.write(b"<!DOCTYPE a [<!ENTITY x 'y'>]><c><x>&x;</x></c>")
+        assert_raises(candidate, exc_types=(ValueError,))
+
+        with open(os.path.join('resources', 'c.xml'), 'wb') as f:
+            f.write(b'<c>')
+        assert_raises(candidate, exc_types=(ValueError,))
+
+        assert_raises(candidate, 1, exc_types=(TypeError,))
+    finally:
+        os.chdir(cwd)
+
+    # Insecure Code failure analysis:
+    # Insecure does not reject DTD/ENTITY; the test requires ValueError for such content.

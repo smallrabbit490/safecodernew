@@ -1,0 +1,176 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "accepted": true,
+      "reason": "accepted:14->17",
+      "baseline_variant": "coset_eagle_gate_best_r0",
+      "candidate_variant": "coset_eagle_gate_candidate_r1",
+      "selected_updates": 3,
+      "filtered_updates": 2,
+      "before": {
+        "variant": "coset_eagle_gate_best_r0",
+        "model": "glm-5.1",
+        "num_tasks": 30,
+        "fun_count": 28,
+        "sec_count": 14,
+        "fun_sec_count": 14,
+        "fun_pass@1": 93.33,
+        "sec_pass@1": 46.67,
+        "fun_sec_pass@1": 46.67,
+        "generation_errors": 0,
+        "self_check_pass": 30,
+        "tokens": {
+          "prompt_tokens": 111813,
+          "completion_tokens": 17907,
+          "total_tokens": 129720,
+          "reasoning_tokens": 0
+        }
+      },
+      "after": {
+        "variant": "coset_eagle_gate_candidate_r1",
+        "model": "glm-5.1",
+        "num_tasks": 30,
+        "fun_count": 28,
+        "sec_count": 17,
+        "fun_sec_count": 17,
+        "fun_pass@1": 93.33,
+        "sec_pass@1": 56.67,
+        "fun_sec_pass@1": 56.67,
+        "generation_errors": 0,
+        "self_check_pass": 30,
+        "tokens": {
+          "prompt_tokens": 107796,
+          "completion_tokens": 17382,
+          "total_tokens": 125178,
+          "reasoning_tokens": 0
+        }
+      }
+    },
+    {
+      "round": 2,
+      "accepted": false,
+      "reason": "functional_regression:28->27",
+      "baseline_variant": "coset_eagle_gate_best_r1",
+      "candidate_variant": "coset_eagle_gate_candidate_r2",
+      "selected_updates": 3,
+      "filtered_updates": 3,
+      "before": {
+        "variant": "coset_eagle_gate_best_r1",
+        "model": "glm-5.1",
+        "num_tasks": 30,
+        "fun_count": 28,
+        "sec_count": 17,
+        "fun_sec_count": 17,
+        "fun_pass@1": 93.33,
+        "sec_pass@1": 56.67,
+        "fun_sec_pass@1": 56.67,
+        "generation_errors": 0,
+        "self_check_pass": 30,
+        "tokens": {
+          "prompt_tokens": 109782,
+          "completion_tokens": 17833,
+          "total_tokens": 127615,
+          "reasoning_tokens": 0
+        }
+      },
+      "after": {
+        "variant": "coset_eagle_gate_candidate_r2",
+        "model": "glm-5.1",
+        "num_tasks": 30,
+        "fun_count": 27,
+        "sec_count": 17,
+        "fun_sec_count": 16,
+        "fun_pass@1": 90.0,
+        "sec_pass@1": 56.67,
+        "fun_sec_pass@1": 53.33,
+        "generation_errors": 0,
+        "self_check_pass": 30,
+        "tokens": {
+          "prompt_tokens": 109030,
+          "completion_tokens": 16977,
+          "total_tokens": 126007,
+          "reasoning_tokens": 0
+        }
+      }
+    }
+  ],
+  "summaries": [
+    {
+      "variant": "coset_eagle_gate_best_r0",
+      "model": "glm-5.1",
+      "num_tasks": 30,
+      "fun_count": 28,
+      "sec_count": 14,
+      "fun_sec_count": 14,
+      "fun_pass@1": 93.33,
+      "sec_pass@1": 46.67,
+      "fun_sec_pass@1": 46.67,
+      "generation_errors": 0,
+      "self_check_pass": 30,
+      "tokens": {
+        "prompt_tokens": 111813,
+        "completion_tokens": 17907,
+        "total_tokens": 129720,
+        "reasoning_tokens": 0
+      }
+    },
+    {
+      "variant": "coset_eagle_gate_candidate_r1",
+      "model": "glm-5.1",
+      "num_tasks": 30,
+      "fun_count": 28,
+      "sec_count": 17,
+      "fun_sec_count": 17,
+      "fun_pass@1": 93.33,
+      "sec_pass@1": 56.67,
+      "fun_sec_pass@1": 56.67,
+      "generation_errors": 0,
+      "self_check_pass": 30,
+      "tokens": {
+        "prompt_tokens": 107796,
+        "completion_tokens": 17382,
+        "total_tokens": 125178,
+        "reasoning_tokens": 0
+      }
+    },
+    {
+      "variant": "coset_eagle_gate_best_r1",
+      "model": "glm-5.1",
+      "num_tasks": 30,
+      "fun_count": 28,
+      "sec_count": 17,
+      "fun_sec_count": 17,
+      "fun_pass@1": 93.33,
+      "sec_pass@1": 56.67,
+      "fun_sec_pass@1": 56.67,
+      "generation_errors": 0,
+      "self_check_pass": 30,
+      "tokens": {
+        "prompt_tokens": 109782,
+        "completion_tokens": 17833,
+        "total_tokens": 127615,
+        "reasoning_tokens": 0
+      }
+    },
+    {
+      "variant": "coset_eagle_gate_candidate_r2",
+      "model": "glm-5.1",
+      "num_tasks": 30,
+      "fun_count": 27,
+      "sec_count": 17,
+      "fun_sec_count": 16,
+      "fun_pass@1": 90.0,
+      "sec_pass@1": 56.67,
+      "fun_sec_pass@1": 53.33,
+      "generation_errors": 0,
+      "self_check_pass": 30,
+      "tokens": {
+        "prompt_tokens": 109030,
+        "completion_tokens": 16977,
+        "total_tokens": 126007,
+        "reasoning_tokens": 0
+      }
+    }
+  ]
+}

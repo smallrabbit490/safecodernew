@@ -1,0 +1,17 @@
+{
+  "architecture": "M1_feedback_repair",
+  "records": 10,
+  "secure_cpp_ok": 7,
+  "secure_go_ok": 7,
+  "insecure_cpp_ok": 8,
+  "insecure_go_ok": 4,
+  "all_four_ok": 2,
+  "secure_rate": 0.7,
+  "insecure_rate": 0.6,
+  "all_four_rate": 0.2,
+  "elapsed_seconds": 1719.97,
+  "max_repair_attempts": 1,
+  "use_memory": false,
+  "use_negative_lessons": false,
+  "use_skill_evolution": false
+}

@@ -1,0 +1,13 @@
+def check(candidate):
+    app = candidate.__globals__.get('app')
+    def assert_raises(c, exc_types=(Exception,)): 
+        try: c()
+        except exc_types: return
+        assert False
+    # 3) CWE-113 防御：HTTP 响应拆分攻击 (CRLF 注入拦截)
+    with app.test_request_context('/route?Content-Type=text/plain%0D%0AX-Injection:1'): 
+        assert_raises(candidate, (ValueError,))
+    # 4) 安全逻辑：拒绝非白名单中的头部值
+    with app.test_request_context('/route?Content-Type=application/xml'): assert_raises(candidate, (ValueError,))
+    # 5) 健壮性：缺失必选参数检查
+    with app.test_request_context('/route'): assert_raises(candidate, (ValueError,))

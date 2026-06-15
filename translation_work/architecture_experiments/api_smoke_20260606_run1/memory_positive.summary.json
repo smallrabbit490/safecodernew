@@ -1,0 +1,17 @@
+{
+  "architecture": "memory_positive",
+  "records": 2,
+  "secure_cpp_ok": 1,
+  "secure_go_ok": 1,
+  "insecure_cpp_ok": 2,
+  "insecure_go_ok": 2,
+  "all_four_ok": 0,
+  "secure_rate": 0.5,
+  "insecure_rate": 1.0,
+  "all_four_rate": 0.0,
+  "elapsed_seconds": 787.41,
+  "max_repair_attempts": 1,
+  "use_memory": true,
+  "use_negative_lessons": false,
+  "use_skill_evolution": false
+}

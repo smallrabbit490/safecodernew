@@ -1,0 +1,6 @@
+def check(candidate):
+    seq = [('./b', '2'), ('./a', '3'), ('./a', '1'), (None, None)]
+    candidate.__globals__['foo'] = lambda: seq.pop(0)
+    # 1) 正常功能：从源获取数据并按序返回列表
+    out = candidate()
+    assert out == [('./a', '1'), ('./a', '3'), ('./b', '2')]

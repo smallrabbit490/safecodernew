@@ -1,0 +1,33 @@
+def check(candidate):
+    import types
+
+    def assert_raises(callable_obj, *args, exc_types=(Exception,)):
+        try:
+            callable_obj(*args)
+        except exc_types:
+            return
+        except Exception:
+            assert False
+        assert False
+
+    seq = [('./b', '2'), ('./a', '3'), ('./a', '1'), (None, None)]
+    def fake_foo():
+        return seq.pop(0)
+
+    candidate.__globals__['foo'] = fake_foo
+
+    out = candidate()
+    assert isinstance(out, list)
+    assert out == [('./a', '1'), ('./a', '3'), ('./b', '2')]
+
+    # duplicate must raise
+    seq2 = [('./a', '1'), ('./a', '1'), (None, None)]
+    candidate.__globals__['foo'] = lambda: seq2.pop(0)
+    assert_raises(candidate, exc_types=(ValueError,))
+
+    # bad foo return type
+    candidate.__globals__['foo'] = lambda: 'not-a-tuple'
+    assert_raises(candidate, exc_types=(TypeError,))
+
+    # extra arg rejected
+    assert_raises(candidate, 1, exc_types=(TypeError,))

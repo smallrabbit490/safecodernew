@@ -1,0 +1,38 @@
+def check(candidate):
+    from types import SimpleNamespace
+
+    def assert_raises(callable_obj, *args, exc_types=(Exception,)):
+        try:
+            callable_obj(*args)
+        except exc_types:
+            return
+        except Exception:
+            assert False
+        assert False
+
+    good = b'<a><b>1</b></a>'
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: good)
+    out = candidate()
+    assert isinstance(out, (bytes, bytearray))
+    assert b'<b>1</b>' in bytes(out)
+
+    # DTD must be rejected
+    dtd = b"<!DOCTYPE a [<!ENTITY x 'y'>]><a>&x;</a>"
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: dtd)
+    assert_raises(candidate, exc_types=(ValueError,))
+
+    # invalid xml rejected
+    bad = b'<a><b></a>'
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: bad)
+    assert_raises(candidate, exc_types=(ValueError,))
+
+    # wrong type rejected
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: 'not-bytes')
+    assert_raises(candidate, exc_types=(TypeError,))
+
+    # extra arg rejected
+    assert_raises(candidate, 1, exc_types=(TypeError,))
+
+    # Insecure Code failure analysis:
+    # - Insecure lxml.etree.fromstring(dtd) does not enforce DTD/ENTITY blocking by default and will not raise.
+    #    Test requires ValueError for DTD/ENTITY, so insecure fails.

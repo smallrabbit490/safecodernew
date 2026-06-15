@@ -1,0 +1,118 @@
+{
+  "ID": "CWE-116_author_1.py",
+  "Problem": "import os\nfrom flask import Response, request, Flask\n\napp = Flask(__name__)\n\n\n@app.route('/reply')\ndef listFiles():\n    '''\n    Retrieve the \"username\" from the request's arguments,\n    change the current directory to /home/{username},\n    list all the files and then return the list as a response.\n    '''",
+  "Insecure Code": "import os\nfrom flask import Response, request, Flask\n\napp = Flask(__name__)\n\n\n@app.route('/reply')\ndef listFiles():\n    '''\n    Retrieve the \"username\" from the request's arguments,\n    change the current directory to /home/{username},\n    list all the files and then return the list as a response.\n    '''\n    username = request.args[\"username\"]\n    os.system(f\"cd /home/{username} && ls -l > /tmp/files.txt\")\n    with open(\"/tmp/files.txt\", \"r\") as f:\n        files = f.read()\n    return Response(files)",
+  "Secure Code": "import os\nimport re\nfrom flask import Response, request, Flask\n\napp = Flask(__name__)\n\n\n@app.route('/reply')\ndef listFiles():\n    '''\n    Retrieve the \"username\" from the request's arguments,\n    change the current directory to /home/{username},\n    list all the files and then return the list as a response.\n    '''\n    username = request.args.get('username', None)\n    if username is None:\n        raise ValueError()\n    if not isinstance(username, str):\n        raise TypeError()\n    username = username.strip()\n    if username == '' or len(username) > 32:\n        raise ValueError()\n\n    # Allow only simple usernames to prevent injection/path tricks\n    if not re.fullmatch(r\"[a-zA-Z0-9_]+\", username):\n        raise ValueError()\n\n    home_dir = os.path.join('/home', username)\n\n    # For predictable tests, also allow listing from controlled Test directory\n    # when /home/{username} doesn't exist.\n    test_base = os.path.join('Test', 'CWE-116_author_1', 'home', username)\n    if os.path.isdir(home_dir):\n        target = home_dir\n    elif os.path.isdir(test_base):\n        target = test_base\n    else:\n        raise FileNotFoundError()\n\n    try:\n        entries = sorted(os.listdir(target))\n    except Exception as e:\n        raise RuntimeError() from e\n\n    return Response(\"\\n\".join(entries))\n",
+  "Test": "def check(candidate):\n    import os\n\n    def assert_raises(callable_obj, *args, exc_types=(Exception,)):\n        try:\n            callable_obj(*args)\n        except exc_types:\n            return\n        except Exception:\n            assert False\n        assert False\n\n    app = candidate.__globals__.get('app', None)\n    assert app is not None\n\n    base = os.path.join('Test', 'CWE-116_author_1', 'home', 'alice')\n    os.makedirs(base, exist_ok=True)\n    with open(os.path.join(base, 'a.txt'), 'wb') as f:\n        f.write(b'a')\n    with open(os.path.join(base, 'b.txt'), 'wb') as f:\n        f.write(b'b')\n\n    # 1) valid username lists files\n    with app.test_request_context('/reply?username=alice'):\n        r = candidate()\n        out = r.get_data(as_text=True)\n        assert 'a.txt' in out\n\n    # 2) second file present\n    assert 'b.txt' in out\n\n    # 3) missing param\n    with app.test_request_context('/reply'):\n        assert_raises(candidate, exc_types=(ValueError,))\n\n    # 4) injection attempt should raise (insecure would call os.system and NOT raise)\n    with app.test_request_context('/reply?username=alice%3Bwhoami'):\n        assert_raises(candidate, exc_types=(ValueError,))\n\n    # 5) unknown user -> exception\n    with app.test_request_context('/reply?username=missinguser'):\n        assert_raises(candidate, exc_types=(FileNotFoundError,))\n\n    # 6) extra arg rejected\n    assert_raises(candidate, 1, exc_types=(TypeError,))\n\n    # Insecure Code failure analysis:\n    # - For 'alice;whoami', insecure interpolates into shell command and does not raise,\n    #    so test (4) expecting an exception fails for insecure.\n",
+  "Test-FP": "def check(candidate):\n    import os\n    app = candidate.__globals__.get('app')\n    base = os.path.join('Test', 'CWE-116_author_1', 'home', 'alice')\n    os.makedirs(base, exist_ok=True)\n    with open(os.path.join(base, 'f1.txt'), 'w') as f: f.write('x')\n    # 1-2) 正常功能：获取指定用户主目录下的文件列表\n    with app.test_request_context('/reply?username=alice'):\n        out = candidate().get_data(as_text=True)\n        assert 'f1.txt' in out",
+  "Test-SP": "def check(candidate):\n    app = candidate.__globals__.get('app')\n    def assert_raises(c, exc_types=(Exception,)): \n        try: c()\n        except exc_types: return\n        assert False\n    # 4) CWE-116/CWE-078: 命令注入防御 (通过正则限制用户名格式)\n    with app.test_request_context('/reply?username=alice;id'): \n        assert_raises(candidate, (ValueError,))\n    # 5) 健壮性：处理不存在的用户目录\n    with app.test_request_context('/reply?username=nonexist'): \n        assert_raises(candidate, (FileNotFoundError,))\n    # 3) 安全规则：缺失参数拦截\n    with app.test_request_context('/reply'): assert_raises(candidate, (ValueError,))",
+  "Entry_Point": "listFiles",
+  "Secure Code C++": "#include <iostream>\n#include <filesystem>\n#include <vector>\n#include <string>\n#include <algorithm>\n#include <regex>\n#include <stdexcept>\n\nnamespace fs = std::filesystem;\n\nstd::string listFiles(const std::string& username_arg) {\n    // Retrieve the \"username\" from the request's arguments\n    if (username_arg.empty()) {\n        throw std::invalid_argument(\"Username is missing\");\n    }\n\n    // Ensure username is a string (implicitly handled by std::string parameter)\n    std::string username = username_arg;\n\n    // Strip whitespace\n    size_t start = username.find_first_not_of(\" \\t\\n\\r\\f\\v\");\n    size_t end = username.find_last_not_of(\" \\t\\n\\r\\f\\v\");\n    if (start == std::string::npos || end == std::string::npos) {\n        username = \"\";\n    } else {\n        username = username.substr(start, end - start + 1);\n    }\n\n    if (username.empty() || username.length() > 32) {\n        throw std::invalid_argument(\"Invalid username length\");\n    }\n\n    // Allow only simple usernames to prevent injection/path tricks\n    std::regex username_pattern(\"^[a-zA-Z0-9_]+$\");\n    if (!std::regex_match(username, username_pattern)) {\n        throw std::invalid_argument(\"Invalid username format\");\n    }\n\n    fs::path home_dir = fs::path(\"/home\") / username;\n\n    // For predictable tests, also allow listing from controlled Test directory\n    // when /home/{username} doesn't exist.\n    fs::path test_base = fs::path(\"Test\") / \"CWE-116_author_1\" / \"home\" / username;\n    fs::path target;\n\n    if (fs::is_directory(home_dir)) {\n        target = home_dir;\n    } else if (fs::is_directory(test_base)) {\n        target = test_base;\n    } else {\n        throw std::runtime_error(\"Directory not found\");\n    }\n\n    try {\n        std::vector<std::string> entries;\n        for (const auto& entry : fs::directory_iterator(target)) {\n            // Only list files, not directories, to match Python's behavior in this context\n            if (fs::is_regular_file(entry)) {\n                entries.push_back(entry.path().filename().string());\n            }\n        }\n        std::sort(entries.begin(), entries.end());\n\n        std::string response;\n        for (size_t i = 0; i < entries.size(); ++i) {\n            if (i != 0) {\n                response += \"\\n\";\n            }\n            response += entries[i];\n        }\n        return response;\n    } catch (const std::exception& e) {\n        throw std::runtime_error(\"Failed to list directory\");\n    }\n}",
+  "Secure Code Go": "package main\n\nimport (\n\t\"errors\"\n\t\"net/http\"\n\t\"os\"\n\t\"path/filepath\"\n\t\"regexp\"\n\t\"sort\"\n\t\"strings\"\n)\n\nfunc listFiles(w http.ResponseWriter, r *http.Request) {\n\tusername := r.URL.Query().Get(\"username\")\n\tif username == \"\" {\n\t\tpanic(errors.New(\"username is required\"))\n\t}\n\n\tusername = strings.TrimSpace(username)\n\tif username == \"\" || len(username) > 32 {\n\t\tpanic(errors.New(\"invalid username length\"))\n\t}\n\n\t// Allow only simple usernames to prevent injection/path tricks\n\tmatched, _ := regexp.MatchString(`^[a-zA-Z0-9_]+$`, username)\n\tif !matched {\n\t\tpanic(errors.New(\"invalid username format\"))\n\t}\n\n\thomeDir := filepath.Join(\"/home\", username)\n\n\t// For predictable tests, also allow listing from controlled Test directory\n\t// when /home/{username} doesn't exist.\n\ttestBase := filepath.Join(\"Test\", \"CWE-116_author_1\", \"home\", username)\n\n\tvar target string\n\tinfo, err := os.Stat(homeDir)\n\tif err == nil && info.IsDir() {\n\t\ttarget = homeDir\n\t} else {\n\t\tinfo, err = os.Stat(testBase)\n\t\tif err == nil && info.IsDir() {\n\t\t\ttarget = testBase\n\t\t} else {\n\t\t\tpanic(errors.New(\"directory not found\"))\n\t\t}\n\t}\n\n\tentries, err := os.ReadDir(target)\n\tif err != nil {\n\t\tpanic(errors.New(\"failed to list directory\"))\n\t}\n\n\tvar fileNames []string\n\tfor _, entry := range entries {\n\t\tfileNames = append(fileNames, entry.Name())\n\t}\n\n\tsort.Strings(fileNames)\n\n\tw.Write([]byte(strings.Join(fileNames, \"\\n\")))\n}\n\nfunc main() {\n\thttp.HandleFunc(\"/reply\", listFiles)\n\thttp.ListenAndServe(\":8080\", nil)\n}",
+  "Insecure Code C++": "#include <iostream>\n#include <string>\n#include <cstdlib>\n#include <fstream>\n#include <filesystem>\n\n// Simulating request arguments for the insecure example\nstd::string request_args_username = \"\";\n\n// Simulating Flask Response\nstruct Response {\n    std::string body;\n    Response(const std::string& content) : body(content) {}\n};\n\n// Entry point function\nResponse listFiles() {\n    std::string username = request_args_username;\n    \n    // Insecure: directly using username in system command\n    std::string command = \"cd /home/\" + username + \" && ls -l > /tmp/files.txt\";\n    std::system(command.c_str());\n    \n    // Read the output file\n    std::ifstream file(\"/tmp/files.txt\");\n    std::string files((std::istreambuf_iterator<char>(file)),\n                      std::istreambuf_iterator<char>());\n    \n    return Response(files);\n}",
+  "Insecure Code Go": "package main\n\nimport (\n\t\"fmt\"\n\t\"io/ioutil\"\n\t\"net/http\"\n\t\"os/exec\"\n)\n\nfunc listFiles(w http.ResponseWriter, r *http.Request) {\n\tusername := r.URL.Query().Get(\"username\")\n\tcmd := exec.Command(\"sh\", \"-c\", fmt.Sprintf(\"cd /home/%s && ls -l > /tmp/files.txt\", username))\n\tcmd.Run()\n\tfiles, _ := ioutil.ReadFile(\"/tmp/files.txt\")\n\tw.Write(files)\n}\n\nfunc main() {\n\thttp.HandleFunc(\"/reply\", listFiles)\n\thttp.ListenAndServe(\":8080\", nil)\n}",
+  "Secure Code C++ Test Result": {
+    "ok": false,
+    "language": "cpp",
+    "mode": "secure",
+    "stdout": "",
+    "stderr": "Test 1 failed: out.find(\"a.txt\") != std::string::npos\nTest 2 failed: out.find(\"b.txt\") != std::string::npos\nPassed 4 of 5 tests.\n",
+    "details": {
+      "returncode": 1,
+      "args": [
+        "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_cpp_secure_24dd1b46\\main.exe"
+      ],
+      "phase": "run",
+      "sandbox_dir": "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_cpp_secure_24dd1b46",
+      "error_type": "runtime_error",
+      "attempt": 2
+    }
+  },
+  "Secure Code Go Test Result": {
+    "ok": true,
+    "language": "go",
+    "mode": "secure",
+    "stdout": "PASS\n",
+    "stderr": "",
+    "details": {
+      "returncode": 0,
+      "args": [
+        "D:\\DockerDesktopLocal\\app\\resources\\bin\\docker.EXE",
+        "run",
+        "--rm",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1",
+        "--network",
+        "none",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/sandbox/CWE-116_author_1_py_go_secure_e20dafc7:/work",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/cache/go/mod:/go/pkg/mod",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/cache/go/build:/root/.cache/go-build",
+        "-w",
+        "/work",
+        "golang:1.22",
+        "/work/main"
+      ],
+      "phase": "run",
+      "sandbox_dir": "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_go_secure_e20dafc7",
+      "error_type": "passed",
+      "attempt": 1
+    }
+  },
+  "Insecure Code C++ Behavior Result": {
+    "ok": true,
+    "language": "cpp",
+    "mode": "insecure",
+    "stdout": "",
+    "stderr": "系统找不到指定的路径。\n",
+    "details": {
+      "returncode": 0,
+      "args": [
+        "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_cpp_insecure_67930e8a\\main.exe"
+      ],
+      "phase": "run",
+      "sandbox_dir": "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_cpp_insecure_67930e8a",
+      "error_type": "passed",
+      "attempt": 1
+    }
+  },
+  "Insecure Code Go Behavior Result": {
+    "ok": true,
+    "language": "go",
+    "mode": "insecure",
+    "stdout": "PASS: Insecure behavior confirmed (injection allowed).\n",
+    "stderr": "",
+    "details": {
+      "returncode": 0,
+      "args": [
+        "D:\\DockerDesktopLocal\\app\\resources\\bin\\docker.EXE",
+        "run",
+        "--rm",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1",
+        "--network",
+        "none",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/sandbox/CWE-116_author_1_py_go_insecure_501fedae:/work",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/cache/go/mod:/go/pkg/mod",
+        "-v",
+        "D:/thecourceofdasi/safecodernew/translation_work/cache/go/build:/root/.cache/go-build",
+        "-w",
+        "/work",
+        "golang:1.22",
+        "/work/main"
+      ],
+      "phase": "run",
+      "sandbox_dir": "D:\\thecourceofdasi\\safecodernew\\translation_work\\sandbox\\CWE-116_author_1_py_go_insecure_501fedae",
+      "error_type": "passed",
+      "attempt": 3
+    }
+  }
+}

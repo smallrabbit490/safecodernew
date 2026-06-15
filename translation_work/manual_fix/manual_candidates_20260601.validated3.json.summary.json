@@ -1,0 +1,11 @@
+{
+  "records": 7,
+  "secure_cpp_ok": 7,
+  "secure_go_ok": 7,
+  "insecure_cpp_ok": 7,
+  "insecure_go_ok": 7,
+  "secure_cpp_skipped": 0,
+  "secure_go_skipped": 0,
+  "insecure_cpp_skipped": 0,
+  "insecure_go_skipped": 0
+}

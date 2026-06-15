@@ -1,0 +1,51 @@
+{
+  "data_path": "..\\CodeSecEval\\SecEvaBase.json",
+  "train_size": 4,
+  "test_size": 2,
+  "seed": 20260606,
+  "train_ids": [
+    "CWE-601_sonar_2.py",
+    "CWE-521_sonar_2.py",
+    "CWE-434_pearce_1.py",
+    "CWE-730_author_1.py"
+  ],
+  "test_ids": [
+    "CWE-1204_sonar_1.py",
+    "CWE-319_author_2.py"
+  ],
+  "architectures": [
+    {
+      "name": "baseline_repair",
+      "max_repair_attempts": 1,
+      "use_memory": false,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false
+    },
+    {
+      "name": "memory_positive",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false
+    },
+    {
+      "name": "memory_positive_negative",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": true,
+      "use_skill_evolution": false
+    },
+    {
+      "name": "memory_skill_evolution",
+      "max_repair_attempts": 2,
+      "use_memory": true,
+      "use_negative_lessons": true,
+      "use_skill_evolution": true
+    }
+  ],
+  "dry_run": true,
+  "run_api": false,
+  "model": "glm-5.1",
+  "lessons_path": "..\\..\\translation_work\\architecture_experiments\\api_smoke_20260606\\lessons.json",
+  "evolved_skill": "Before changing behavior, classify the failure as compile/interface, functional mismatch, or security-semantics mismatch. Prefer the smallest target-language fix. For insecure mode, never convert a vulnerable API or missing validation into a secure alternative unless the Python insecure source already did so. Training CWEs observed: CWE-434, CWE-521, CWE-601, CWE-730."
+}

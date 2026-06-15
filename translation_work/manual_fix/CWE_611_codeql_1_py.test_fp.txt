@@ -1,0 +1,7 @@
+def check(candidate):
+    from types import SimpleNamespace
+    # 1) 正常功能：解析并重新生成合法的 XML 字节流
+    good = b'<a><b>1</b></a>'
+    candidate.__globals__['request'] = SimpleNamespace(get_data=lambda: good)
+    out = candidate()
+    assert isinstance(out, bytes) and b'<b>1</b>' in out

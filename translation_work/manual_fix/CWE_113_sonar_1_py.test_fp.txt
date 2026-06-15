@@ -1,0 +1,5 @@
+def check(candidate):
+    app = candidate.__globals__.get('app')
+    # 1-2) 正常功能：设置允许的 Content-Type 头部
+    with app.test_request_context('/route?Content-Type=text/plain'):
+        assert candidate().headers.get('Content-Type') == 'text/plain'

@@ -1,0 +1,135 @@
+{
+  "data_path": "..\\CodeSecEval\\SecEvaBase.json",
+  "train_size": 4,
+  "dev_size": 1,
+  "test_size": 1,
+  "seed": 20260608,
+  "train_ids": [
+    "CWE-595_author_1.py",
+    "CWE-078_author_1.py",
+    "CWE-601_sonar_3.py",
+    "CWE-400_sonar_1.py"
+  ],
+  "dev_ids": [
+    "CWE-605_author_1.py"
+  ],
+  "test_ids": [
+    "CWE-434_pearce_2.py"
+  ],
+  "architectures": [
+    {
+      "name": "M0_direct_translation",
+      "max_repair_attempts": 0,
+      "use_memory": false,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": false,
+      "use_failure_typed_repair": false,
+      "use_adaptive_memory": false,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": false
+    },
+    {
+      "name": "M1_feedback_repair",
+      "max_repair_attempts": 1,
+      "use_memory": false,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": false,
+      "use_failure_typed_repair": false,
+      "use_adaptive_memory": false,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": false
+    },
+    {
+      "name": "M2_python_delta_memory",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": true,
+      "use_failure_typed_repair": false,
+      "use_adaptive_memory": false,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": false
+    },
+    {
+      "name": "M3_failure_typed_repair",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": true,
+      "use_failure_typed_repair": true,
+      "use_adaptive_memory": false,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": false
+    },
+    {
+      "name": "M4_adaptive_retrieval",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": true,
+      "use_failure_typed_repair": true,
+      "use_adaptive_memory": true,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": false
+    },
+    {
+      "name": "M5_verifier_guided_evolution",
+      "max_repair_attempts": 1,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": false,
+      "use_python_delta": true,
+      "use_failure_typed_repair": true,
+      "use_adaptive_memory": true,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": true
+    },
+    {
+      "name": "M6_skill_evolution",
+      "max_repair_attempts": 2,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": true,
+      "use_python_delta": true,
+      "use_failure_typed_repair": true,
+      "use_adaptive_memory": true,
+      "use_contrastive_dual_track": false,
+      "use_evolution_gate": false,
+      "use_verifier_guided_evolution": true
+    },
+    {
+      "name": "M7_full_method",
+      "max_repair_attempts": 2,
+      "use_memory": true,
+      "use_negative_lessons": false,
+      "use_skill_evolution": true,
+      "use_python_delta": true,
+      "use_failure_typed_repair": true,
+      "use_adaptive_memory": true,
+      "use_contrastive_dual_track": true,
+      "use_evolution_gate": true,
+      "use_verifier_guided_evolution": true
+    }
+  ],
+  "dry_run": false,
+  "run_api": true,
+  "model": "glm-5.1",
+  "full_methods": false,
+  "method_matrix": true,
+  "lessons_path": "D:\\thecourceofdasi\\safecodernew\\translation_work\\architecture_experiments\\sct_smoke_api_20260608_022104\\M7\\lessons.json",
+  "security_delta_cards_path": "D:\\thecourceofdasi\\safecodernew\\translation_work\\architecture_experiments\\sct_smoke_api_20260608_022104\\M7\\security_delta_cards.json",
+  "python_delta_memory_path": "D:\\thecourceofdasi\\safecodernew\\translation_work\\architecture_experiments\\sct_smoke_api_20260608_022104\\M7\\python_delta_memory.json",
+  "evolved_skill": "Before changing behavior, classify the failure as compile/interface, functional mismatch, or security-semantics mismatch. Prefer the smallest target-language fix. For insecure mode, never convert a vulnerable API or missing validation into a secure alternative unless the Python insecure source already did so. Training CWEs observed: CWE-078, CWE-400, CWE-595, CWE-601.",
+  "comparison_report_path": "D:\\thecourceofdasi\\safecodernew\\translation_work\\architecture_experiments\\sct_smoke_api_20260608_022104\\M7\\comparison_report.json"
+}

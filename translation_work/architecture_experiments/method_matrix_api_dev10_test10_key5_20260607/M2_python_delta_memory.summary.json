@@ -1,0 +1,17 @@
+{
+  "architecture": "M2_python_delta_memory",
+  "records": 10,
+  "secure_cpp_ok": 7,
+  "secure_go_ok": 9,
+  "insecure_cpp_ok": 7,
+  "insecure_go_ok": 7,
+  "all_four_ok": 2,
+  "secure_rate": 0.8,
+  "insecure_rate": 0.7,
+  "all_four_rate": 0.2,
+  "elapsed_seconds": 807.05,
+  "max_repair_attempts": 1,
+  "use_memory": true,
+  "use_negative_lessons": false,
+  "use_skill_evolution": false
+}

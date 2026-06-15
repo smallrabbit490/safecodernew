@@ -1,0 +1,15 @@
+def check(candidate):
+    import os
+    def assert_raises(c, *a, exc_types=(Exception,)): 
+        try: c(*a)
+        except exc_types: return
+        assert False
+    calls = {'down': 0}
+    candidate.__globals__.update({'raisePrivileges': lambda: None, 'lowerPrivileges': lambda: calls.__setitem__('down', 1), 'invalidUsername': lambda u: False})
+    # 3) CWE-269 核心防御：无论操作成功与否，必须执行降权 (finally 逻辑)
+    try: candidate('alice')
+    except: pass
+    assert_raises(candidate, 'alice', exc_types=(FileExistsError,))
+    assert calls['down'] == 1
+    # 4) 安全防护：防止路径穿越注入非法用户名
+    assert_raises(candidate, 'a/../b', exc_types=(ValueError,))

@@ -1,0 +1,7 @@
+def check(candidate):
+    class MockTree: 
+        def xpath(self, e, **k): return ['TAG:1'] if k.get('id')=='1' else []
+    candidate.__globals__['etree'] = type('E', (), {'parse': lambda f: MockTree()})
+    # 1) 正常功能：通过合法 ID 查询 XML 标签并返回结果列表
+    r = type('Req', (), {'GET': {'xpath': '1', 'xml': '<t id="1"/>'}})()
+    assert candidate(r) == ['TAG:1']

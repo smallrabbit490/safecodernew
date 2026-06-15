@@ -1,0 +1,41 @@
+def check(candidate):
+    def assert_raises(callable_obj, *args, exc_types=(Exception,)):
+        try:
+            callable_obj(*args)
+        except exc_types:
+            return
+        except Exception:
+            assert False
+        assert False
+
+    app = candidate.__globals__.get('app', None)
+    assert app is not None
+
+    # 1) allowed content-type
+    with app.test_request_context('/route?Content-Type=text/plain'):
+        r = candidate()
+        assert r.headers.get('Content-Type') == 'text/plain'
+
+    # 2) another allowed
+    with app.test_request_context('/route?Content-Type=application/json'):
+        r = candidate()
+        assert r.headers.get('Content-Type') == 'application/json'
+
+    # 3) reject header injection (insecure would accept and FAIL)
+    with app.test_request_context('/route?Content-Type=text/plain%0D%0AX-Evil%3A1'):
+        assert_raises(candidate, exc_types=(ValueError,))
+
+    # 4) reject unknown type
+    with app.test_request_context('/route?Content-Type=application/xml'):
+        assert_raises(candidate, exc_types=(ValueError,))
+
+    # 5) missing
+    with app.test_request_context('/route'):
+        assert_raises(candidate, exc_types=(ValueError,))
+
+    # 6) extra arg rejected
+    assert_raises(candidate, 1, exc_types=(TypeError,))
+
+    # Insecure Code failure analysis:
+    # - For injected CRLF value, insecure adds it to headers and does not raise,
+    #    so test (3) expecting an exception fails for insecure.

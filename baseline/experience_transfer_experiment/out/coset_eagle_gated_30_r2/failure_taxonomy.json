@@ -1,0 +1,19 @@
+{
+  "coset_eagle_gate_best_r0": {
+    "assertion_mismatch": 15,
+    "other": 1
+  },
+  "coset_eagle_gate_candidate_r1": {
+    "assertion_mismatch": 12,
+    "other": 1
+  },
+  "coset_eagle_gate_best_r1": {
+    "assertion_mismatch": 12,
+    "other": 1
+  },
+  "coset_eagle_gate_candidate_r2": {
+    "assertion_mismatch": 12,
+    "syntax_or_parse": 1,
+    "other": 1
+  }
+}

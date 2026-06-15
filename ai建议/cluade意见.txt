@@ -1,0 +1,132 @@
+好，SkillOPT 的项目页面读得很清楚了，包括完整的训练循环设计、消融结果和迁移实验。结合你的代码，下面给你系统性地分析。
+
+------
+
+## SkillOPT 的核心机制概览
+
+先把它的流程梳理清楚，再对照你的代码：
+
+SkillOPT 把一个自然语言 skill 文档当作 frozen agent 的可训练状态，通过 rollout → reflect → edit → gate 四个步骤迭代更新它。关键设计是：一个独立的 optimizer 模型分析成功和失败的 minibatch，提出有界的 add/delete/replace 编辑，只有当候选编辑在 held-out validation 上提升了分数，才允许更新当前 skill。
+
+它还有三个额外的稳定机制：rejected buffer（被拒绝的编辑保留为负反馈，防止 optimizer 重复提出有害方向）、slow update（跨 epoch 的纵向比较）、以及 optimizer 侧的 meta skill 记忆。
+
+------
+
+## 你可以借鉴的地方（不改变你的特色）
+
+### 一、Validation Gate：你的自进化现在没有门控
+
+这是 SkillOPT 最核心的一个设计，也是你目前最缺的。
+
+你的 `load_seed_rules()` 读取的规则在整个实验中是只读的——上次分析已经指出，这不是真正的进化。而 SkillOPT 的关键不只是"更新规则"，而是"**有条件地更新规则**"。
+
+候选编辑只有在 held-out selection 性能提升时才被接受，这把 reflection 变成了 propose-and-test 优化，而不是无条件的自我编辑。
+
+对应到你的场景，你完全可以这样做，而且比 SkillOPT 更有安全语义：
+
+```text
+# 你的 Security-Gated Rule Update
+for 每条失败样本:
+    → 提炼出 (failure_type, cwe, candidate_rule)
+    → 把 candidate_rule 插入规则库（临时）
+    → 在 dev 集上重跑涉及该 CWE 的样本
+    → 如果 fun_sec pass@1 提升：规则晋升（Evidence Gate 通过）
+    → 如果没有提升，或者 false_secure 率上升：规则丢弃
+```
+
+这不需要改变你的 Dual-Track 设计，反而可以把你文档里说的"Evidence-Gated Evolution"真正落地。你的 gate 条件比 SkillOPT 更严格——不仅要功能通过，还要安全行为保持。
+
+------
+
+### 二、Rejected Buffer：失败的规则也是信息
+
+消融实验表明，保留被拒绝的编辑作为负反馈，比不保留要在多个 benchmark 上高出 2–5 个点。被拒绝的 buffer 帮助 optimizer 避免重复提出有害方向。
+
+你现在的 `Failure Atlas` 只记录失败样本，但没有记录"哪些规则尝试过但没用"。建议在你的规则库里加一个 `rejected_rules` 字段：
+
+```json
+{
+  "candidate_rule": "...",
+  "cwe": "89",
+  "reason_rejected": "在 dev 集上 false_secure 率从 0.1 上升到 0.3",
+  "timestamp": "..."
+}
+```
+
+在后续的 rule 提炼 prompt 里把这个 rejected buffer 传给 optimizer，明确告诉它"这些方向已经试过且有害，不要再走这条路"。这和你的 Failure Atlas 精神完全一致，只是加了一个对立面。
+
+------
+
+### 三、Bounded Edits（文本学习率）：防止规则大爆炸
+
+SkillOPT 的消融实验中，不加 learning rate 约束（即不限制每次 skill 编辑的幅度）会导致分数下降。有界编辑的意义在于防止有用规则被大规模改写覆盖，同时保留足够的可塑性来学习新模式。
+
+你现在的 `infer_security_checks` 每次最多 8 条，规则检索 top_k=8，这是一个隐式的容量限制。但在规则进化阶段，如果直接合并新提炼的规则，规则库会越来越大，质量越来越稀释。
+
+建议引入一个显式的"规则预算"：
+
+- 每次 evolution 轮次最多新增 N 条规则（比如 N=3）
+- 新规则必须替换旧规则（按 Evidence Gate 通过次数排序，淘汰最弱的）
+- 每条规则记录"晋升次数"和"被命中次数"，作为权重
+
+这样规则库是有界的精华集，不是无限堆砌的备忘录。
+
+------
+
+### 四、Slow Update / Meta-Skill：跨 epoch 的纵向比较
+
+SkillOPT 的 slow update 做的是跨 epoch 的纵向比较，发现没有退步但有三处改进时，允许更大幅度的搜索记忆更新成为新的 best skill。
+
+对应你的场景，可以设计一个轻量版本：
+
+```text
+# 每跑完一轮 test set 之后：
+轮次 K 的 All-Four Rate > 轮次 K-1 的 All-Four Rate
+  → 允许把该轮提炼的规则全量晋升（slow update 通过）
+  → 同时生成一份 security_meta_summary.md，记录"哪类 CWE 最近规律性失败"
+轮次 K 没有整体提升
+  → 只允许晋升通过单次 Evidence Gate 的规则，不做全量更新
+```
+
+这和你的 Failure Atlas 分层机制配合很自然，是"战术层（单条规则 gate）"和"战略层（整轮 slow update）"的两级控制。
+
+------
+
+### 五、Minibatch 分离反射：成功和失败分开分析
+
+SkillOPT 把成功和失败的轨迹分成两个 minibatch 分别送给 optimizer 反射，目的是让编辑既能修正反复出现的错误，又能保留已经有效的行为。
+
+你的 `classify_failures` 已经在做失败分类了，但它只分析失败样本，没有同等分析成功样本。建议加一个"成功模式提炼"的步骤：
+
+```text
+成功样本 → 提炼 "这次用了什么规则 / CWE pattern / repair 路径让它通过"
+失败样本 → 提炼 "卡在了哪一步，属于哪类 failure bucket"
+两者合并送给 rule optimizer
+  → 新规则生成时要求："不能破坏成功样本里依赖的已有行为"
+```
+
+这会让你的规则进化更保守，不容易因为修了一个 CWE 而把另一个 CWE 的成功案例覆盖掉。
+
+------
+
+## 你不需要借鉴的地方（保留你的特色）
+
+SkillOPT 做的是**单一通用 skill 文档**的优化，对所有任务用同一份 skill.md。你的设计本质上是**per-CWE 的细粒度规则检索**，在生成前就根据当前任务的 CWE 类型动态选择相关规则。这比 SkillOPT 更精细，也更符合安全代码生成的需求——不同 CWE 的修复逻辑差异很大，塞进一份通用文档里反而会互相干扰。
+
+你的 Security Delta IR / Dual-Track（Secure + Insecure 双轨验证）是 SkillOPT 完全没有的能力，这是你论文里最有差异化价值的设计，不要为了对标 SkillOPT 而弱化它。
+
+`static_self_check` 的 AST 级别检查也是 SkillOPT 没有的——它的 rollout 只看最终分数，你的自检在代码进沙盒之前就能发现语法和安全 pattern 级别的问题，这是一个很有价值的中间信号。
+
+------
+
+## 总结：建议的改动优先级
+
+| 借鉴点                                    | 改动幅度 | 优先级             | 和你现有特色的关系                        |
+| ----------------------------------------- | -------- | ------------------ | ----------------------------------------- |
+| Validation Gate（规则晋升前跑 dev 验证）  | 中       | 最高               | 直接落地文档里的 Evidence-Gated Evolution |
+| Rejected Buffer（记录被拒规则作为负反馈） | 小       | 高                 | 增强 Failure Atlas，无需改架构            |
+| Bounded Edit（规则库容量上限 + 淘汰机制） | 小       | 高                 | 防止规则库质量稀释                        |
+| Success/Failure Minibatch 分离反射        | 中       | 中                 | 配合现有 classify_failures                |
+| Slow Update（跨轮次纵向比较）             | 中       | 低（后期迭代再加） | 适合实验跑多轮之后再引入                  |
+
+最核心的一句话是：**SkillOPT 的 gate 思想（先验证再晋升）解决的正是你现在代码里"规则只读、没有真正进化"的问题，但它的实现是通用的，而你可以把 gate 条件改成"fun_sec + false_secure 双约束"，这样就比 SkillOPT 的 gate 更严格，也更符合你的安全迁移任务的特性**。

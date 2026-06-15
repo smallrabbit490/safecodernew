@@ -1,0 +1,32 @@
+{
+  "no_memory": {
+    "syntax_or_parse": 1,
+    "assertion_mismatch": 14,
+    "permission_or_auth": 1,
+    "other": 1
+  },
+  "script_codeseceval": {
+    "syntax_or_parse": 1,
+    "assertion_mismatch": 10,
+    "permission_or_auth": 1,
+    "other": 3
+  },
+  "secodeplt_memory": {
+    "assertion_mismatch": 11,
+    "permission_or_auth": 1,
+    "other": 2
+  },
+  "coset_eagle_clean": {
+    "syntax_or_parse": 2,
+    "assertion_mismatch": 14,
+    "other": 1
+  },
+  "coset_eagle_error_only": {
+    "assertion_mismatch": 16,
+    "other": 1
+  },
+  "coset_eagle_clean_evolved": {
+    "assertion_mismatch": 12,
+    "other": 1
+  }
+}

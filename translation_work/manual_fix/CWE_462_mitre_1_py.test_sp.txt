@@ -1,0 +1,12 @@
+def check(candidate):
+    def assert_raises(c, exc_types=(Exception,)): 
+        try: c()
+        except exc_types: return
+        assert False
+    # 2) CWE-462: 资源耗尽/逻辑冲突防御（处理重复数据应抛错）
+    seq2 = [('./a', '1'), ('./a', '1')]
+    candidate.__globals__['foo'] = lambda: seq2.pop(0)
+    assert_raises(candidate, (ValueError,))
+    # 3) 安全加固：边界防御。验证是否处理了 foo 的非法返回类型
+    candidate.__globals__['foo'] = lambda: 'bad'
+    assert_raises(candidate, (TypeError,))
