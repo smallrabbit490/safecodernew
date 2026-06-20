@@ -1,0 +1,163 @@
+{
+  "name": "SecEvo BasePlus",
+  "description": "Five-language SecEvo Base/Plus dataset collection: Python, C++, Go, Java, JavaScript.",
+  "files": [
+    {
+      "file": "Base/Cpp_Base.json",
+      "count": 115,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Test",
+        "Test-FP",
+        "Test-SP",
+        "Source Secure Code Python",
+        "Source Insecure Code Python",
+        "Secure Code Test Result",
+        "Insecure Code Behavior Result"
+      ]
+    },
+    {
+      "file": "Base/Go_Base.json",
+      "count": 115,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Test",
+        "Test-FP",
+        "Test-SP",
+        "Source Secure Code Python",
+        "Source Insecure Code Python",
+        "Secure Code Test Result",
+        "Insecure Code Behavior Result"
+      ]
+    },
+    {
+      "file": "Base/Java_Base.json",
+      "count": 116,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Function Test",
+        "Secure Test"
+      ]
+    },
+    {
+      "file": "Base/JS_Base.json",
+      "count": 116,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Function Test",
+        "Secure Test"
+      ]
+    },
+    {
+      "file": "Base/Python_Base.json",
+      "count": 115,
+      "fields": [
+        "ID",
+        "Problem",
+        "Insecure Code",
+        "Secure Code",
+        "Test",
+        "Test-FP",
+        "Test-SP",
+        "Entry_Point"
+      ]
+    },
+    {
+      "file": "Plus/Cpp_Plus.json",
+      "count": 140,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Test",
+        "Test-FP",
+        "Test-SP",
+        "Source Secure Code Python",
+        "Source Insecure Code Python",
+        "Secure Code Test Result",
+        "Insecure Code Behavior Result",
+        "update"
+      ]
+    },
+    {
+      "file": "Plus/Go_Plus.json",
+      "count": 140,
+      "fields": [
+        "ID",
+        "Problem",
+        "Entry_Point",
+        "Secure Code",
+        "Insecure Code",
+        "Test",
+        "Test-FP",
+        "Test-SP",
+        "Source Secure Code Python",
+        "Source Insecure Code Python",
+        "Secure Code Test Result",
+        "Insecure Code Behavior Result",
+        "update"
+      ]
+    },
+    {
+      "file": "Plus/Java_Plus.json",
+      "count": 140,
+      "fields": [
+        "ID",
+        "Problem",
+        "Insecure Code",
+        "Secure Code",
+        "Function Test",
+        "Secure Test",
+        "Entry_Point",
+        "update"
+      ]
+    },
+    {
+      "file": "Plus/JS_Plus.json",
+      "count": 140,
+      "fields": [
+        "ID",
+        "Problem",
+        "Insecure Code",
+        "Secure Code",
+        "Function Test",
+        "Secure Test",
+        "Entry_Point",
+        "update"
+      ]
+    },
+    {
+      "file": "Plus/Python_Plus.json",
+      "count": 140,
+      "fields": [
+        "ID",
+        "Problem",
+        "Insecure Code",
+        "Secure Code",
+        "Test",
+        "Entry_Point",
+        "update",
+        "Test-FP",
+        "Test-SP"
+      ]
+    }
+  ]
+}

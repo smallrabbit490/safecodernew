@@ -4,10 +4,11 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import uuid
 from pathlib import Path
 
-from .models import ValidationResult
+from .models import ValidationResult, truncate_text
 from .paths import ensure_work_dirs, get_work_dir
 
 
@@ -42,6 +43,9 @@ GO_SINGLE_IMPORT_RE = re.compile(r'(?m)^import\s+(?P<prefix>(?:[\w.]+|_|\.)\s+)?
 GO_STDLIB_HOSTS = {"github.com", "gopkg.in", "golang.org", "gitlab.com", "bitbucket.org"}
 GO_DOCKER_IMAGE = os.environ.get("SAFECODER_GO_DOCKER_IMAGE", "golang:1.22")
 CPP_DOCKER_IMAGE = os.environ.get("SAFECODER_CPP_DOCKER_IMAGE", GO_DOCKER_IMAGE)
+CPP_DOCKER_ENTRYPOINT = os.environ.get("SAFECODER_CPP_DOCKER_ENTRYPOINT", "")
+GO_DOCKER_ENTRYPOINT = os.environ.get("SAFECODER_GO_DOCKER_ENTRYPOINT", "__default__")
+MAX_VALIDATOR_OUTPUT_CHARS = int(os.environ.get("SAFECODER_MAX_VALIDATOR_OUTPUT_CHARS", "2000"))
 
 
 def _to_text(value: object) -> str:
@@ -50,6 +54,118 @@ def _to_text(value: object) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return str(value)
+
+
+def _truncate_output(value: object, limit: int = MAX_VALIDATOR_OUTPUT_CHARS) -> str:
+    return truncate_text(value, limit)
+
+
+def _read_limited_pipe(pipe: object, limit: int, chunks: list[str], truncated: list[bool]) -> None:
+    while True:
+        chunk = pipe.readline()
+        if not chunk:
+            break
+        if sum(len(item) for item in chunks) < limit:
+            remaining = limit - sum(len(item) for item in chunks)
+            chunks.append(chunk[:remaining])
+            if len(chunk) > remaining:
+                truncated[0] = True
+        else:
+            truncated[0] = True
+
+
+def run_command_limited(
+    args: list[str],
+    cwd: Path,
+    timeout: int = 30,
+    env: dict[str, str] | None = None,
+    output_limit: int = MAX_VALIDATOR_OUTPUT_CHARS,
+) -> tuple[int, str, str, bool]:
+    docker_container_name = _extract_docker_container_name(args)
+    process = subprocess.Popen(
+        args,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+    )
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    stdout_truncated = [False]
+    stderr_truncated = [False]
+    assert process.stdout is not None
+    assert process.stderr is not None
+    stdout_thread = threading.Thread(
+        target=_read_limited_pipe,
+        args=(process.stdout, output_limit, stdout_chunks, stdout_truncated),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_read_limited_pipe,
+        args=(process.stderr, output_limit, stderr_chunks, stderr_truncated),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+    timed_out = False
+    try:
+        returncode = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        process.kill()
+        returncode = process.wait()
+        if docker_container_name:
+            _force_remove_docker_container(docker_container_name)
+    stdout_thread.join(timeout=2)
+    stderr_thread.join(timeout=2)
+    process.stdout.close()
+    process.stderr.close()
+    stdout = "".join(stdout_chunks)
+    stderr = "".join(stderr_chunks)
+    if stdout_truncated[0]:
+        stdout += f"\n...[truncated validator stdout at {output_limit} chars]..."
+    if stderr_truncated[0]:
+        stderr += f"\n...[truncated validator stderr at {output_limit} chars]..."
+    if timed_out and not stderr:
+        stderr = "command timed out"
+    return returncode, stdout, stderr, timed_out
+
+
+def _extract_docker_container_name(args: list[str]) -> str | None:
+    if len(args) < 2 or Path(args[0]).name.lower() not in {"docker", "docker.exe"} or args[1] != "run":
+        return None
+    for index, arg in enumerate(args):
+        if arg == "--name" and index + 1 < len(args):
+            return args[index + 1]
+        if arg.startswith("--name="):
+            return arg.split("=", 1)[1]
+    return None
+
+
+def _force_remove_docker_container(name: str) -> None:
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
+def _docker_safe_name(prefix: str, temp_dir: Path) -> str:
+    digest = uuid.uuid5(uuid.NAMESPACE_URL, str(temp_dir.resolve())).hex[:12]
+    return f"safecoder_{prefix}_{digest}"
+
+
+def _linux_timeout_command(seconds: int, command: list[str]) -> list[str]:
+    quoted = " ".join("'" + item.replace("'", "'\"'\"'") + "'" for item in command)
+    return ["sh", "-c", f"timeout -k 5s {seconds}s {quoted}"]
 
 
 def _mask_go_double_quoted_strings(code: str) -> str:
@@ -489,51 +605,41 @@ def run_command(
     phase: str = "run",
     env: dict[str, str] | None = None,
 ) -> ValidationResult:
-    try:
-        completed = subprocess.run(
-            args,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-            env=env,
-        )
+    returncode, stdout, stderr, timed_out = run_command_limited(args, cwd, timeout=timeout, env=env)
+    if not timed_out:
         return ValidationResult(
-            ok=completed.returncode == 0,
+            ok=returncode == 0,
             language="command",
             mode="run",
-            stdout=_to_text(completed.stdout),
-            stderr=_to_text(completed.stderr),
+            stdout=stdout,
+            stderr=stderr,
             details={
-                "returncode": completed.returncode,
+                "returncode": returncode,
                 "args": args,
                 "phase": phase,
                 "sandbox_dir": str(cwd),
                 "error_type": classify_validation_result(
-                    ok=completed.returncode == 0,
+                    ok=returncode == 0,
                     phase=phase,
-                    returncode=completed.returncode,
-                    stderr=_to_text(completed.stderr),
+                    returncode=returncode,
+                    stderr=stderr,
                 ),
             },
         )
-    except subprocess.TimeoutExpired as exc:
-        return ValidationResult(
-            ok=False,
-            language="command",
-            mode="run",
-            stdout=_to_text(exc.stdout),
-            stderr=_to_text(exc.stderr) or "command timed out",
-            details={
-                "timeout": timeout,
-                "args": args,
-                "phase": phase,
-                "sandbox_dir": str(cwd),
-                "error_type": "timeout",
-            },
-        )
+    return ValidationResult(
+        ok=False,
+        language="command",
+        mode="run",
+        stdout=stdout,
+        stderr=stderr or "command timed out",
+        details={
+            "timeout": timeout,
+            "args": args,
+            "phase": phase,
+            "sandbox_dir": str(cwd),
+            "error_type": "timeout",
+        },
+    )
 
 
 def _task_temp_dir(task_id: str, language: str, mode: str) -> Path:
@@ -565,15 +671,21 @@ def _docker_go_args(
         docker_cmd,
         "run",
         "--rm",
+        "--name",
+        _docker_safe_name("go", temp_dir),
         "--stop-timeout",
         "1",
         "--memory",
         "512m",
         "--cpus",
         "1",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,size=128m",
     ]
     if network is not None:
         args.extend(["--network", network])
+    if GO_DOCKER_ENTRYPOINT != "__default__":
+        args.extend(["--entrypoint", GO_DOCKER_ENTRYPOINT])
     args.extend(
         [
             "-v",
@@ -584,6 +696,16 @@ def _docker_go_args(
             f"{_docker_mount_path(build_cache)}:/root/.cache/go-build",
             "-w",
             "/work",
+            "-e",
+            "TMPDIR=/work/.tmp",
+            "-e",
+            "TEMP=/work/.tmp",
+            "-e",
+            "TMP=/work/.tmp",
+            "-e",
+            "GOTMPDIR=/work/.tmp",
+            "-e",
+            "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             GO_DOCKER_IMAGE,
             *command,
         ]
@@ -602,21 +724,33 @@ def _docker_cpp_args(
         docker_cmd,
         "run",
         "--rm",
+        "--name",
+        _docker_safe_name("cpp", temp_dir),
         "--stop-timeout",
         "1",
         "--memory",
         "512m",
         "--cpus",
         "1",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,size=128m",
     ]
     if network is not None:
         args.extend(["--network", network])
+    if CPP_DOCKER_ENTRYPOINT != "__default__":
+        args.extend(["--entrypoint", CPP_DOCKER_ENTRYPOINT])
     args.extend(
         [
             "-v",
             f"{_docker_mount_path(temp_dir)}:/work",
             "-w",
             "/work",
+            "-e",
+            "TMPDIR=/work/.tmp",
+            "-e",
+            "TEMP=/work/.tmp",
+            "-e",
+            "TMP=/work/.tmp",
             CPP_DOCKER_IMAGE,
             *command,
         ]
@@ -780,6 +914,7 @@ def validate_cpp_program(code: str, task_id: str, mode: str) -> ValidationResult
         return preflight_result
 
     temp_dir = _task_temp_dir(task_id, "cpp", mode)
+    (temp_dir / ".tmp").mkdir(parents=True, exist_ok=True)
     source = temp_dir / "main.cpp"
     executable = temp_dir / "main.exe"
     include_dir = get_work_dir() / "downloads" / "include"
@@ -819,6 +954,7 @@ def validate_cpp_program_docker(code: str, task_id: str, mode: str) -> Validatio
         return preflight_result
 
     temp_dir = _task_temp_dir(task_id, "cpp", mode)
+    (temp_dir / ".tmp").mkdir(parents=True, exist_ok=True)
     source = temp_dir / "main.cpp"
     source.write_text(code, encoding="utf-8")
 
@@ -839,15 +975,18 @@ def validate_cpp_program_docker(code: str, task_id: str, mode: str) -> Validatio
             docker_cmd=docker_cmd,
             temp_dir=temp_dir,
             network="none",
-            command=[
-                "g++",
-                "-std=c++17",
-                "-O2",
-                "-I/work/include",
-                "/work/main.cpp",
-                "-o",
-                "/work/main",
-            ],
+            command=_linux_timeout_command(
+                220,
+                [
+                    "g++",
+                    "-std=c++17",
+                    "-O2",
+                    "-I/work/include",
+                    "/work/main.cpp",
+                    "-o",
+                    "/work/main",
+                ],
+            ),
         ),
         cwd=temp_dir,
         timeout=240,
@@ -863,7 +1002,7 @@ def validate_cpp_program_docker(code: str, task_id: str, mode: str) -> Validatio
             docker_cmd=docker_cmd,
             temp_dir=temp_dir,
             network="none",
-            command=["/work/main"],
+            command=_linux_timeout_command(110, ["/work/main"]),
         ),
         cwd=temp_dir,
         timeout=120,
@@ -898,6 +1037,7 @@ def validate_go_program_local(code: str, task_id: str, mode: str, *, go_cmd: str
 
     code = prune_unused_go_imports(code)
     temp_dir = _task_temp_dir(task_id, "go", mode)
+    (temp_dir / ".tmp").mkdir(parents=True, exist_ok=True)
     source = temp_dir / "main.go"
     source.write_text(code, encoding="utf-8")
     (temp_dir / "go.mod").write_text("module safecoder_validation\n\ngo 1.22\n", encoding="utf-8")
@@ -963,6 +1103,7 @@ def validate_go_program_docker(code: str, task_id: str, mode: str) -> Validation
 
     code = prune_unused_go_imports(code)
     temp_dir = _task_temp_dir(task_id, "go", mode)
+    (temp_dir / ".tmp").mkdir(parents=True, exist_ok=True)
     source = temp_dir / "main.go"
     source.write_text(code, encoding="utf-8")
     (temp_dir / "go.mod").write_text("module safecoder_validation\n\ngo 1.22\n", encoding="utf-8")
@@ -997,7 +1138,7 @@ def validate_go_program_docker(code: str, task_id: str, mode: str) -> Validation
                 mod_cache=mod_cache,
                 build_cache=build_cache,
                 network=None,
-                command=["go", "get", *[f"{module}@latest" for module in third_party_modules]],
+                command=_linux_timeout_command(220, ["go", "get", *[f"{module}@latest" for module in third_party_modules]]),
             ),
             cwd=temp_dir,
             timeout=240,
@@ -1015,7 +1156,7 @@ def validate_go_program_docker(code: str, task_id: str, mode: str) -> Validation
             mod_cache=mod_cache,
             build_cache=build_cache,
             network="none",
-            command=["go", "build", "-o", "/work/main", "/work/main.go"],
+            command=_linux_timeout_command(220, ["go", "build", "-o", "/work/main", "/work/main.go"]),
         ),
         cwd=temp_dir,
         timeout=240,
@@ -1033,7 +1174,7 @@ def validate_go_program_docker(code: str, task_id: str, mode: str) -> Validation
             mod_cache=mod_cache,
             build_cache=build_cache,
             network="none",
-            command=["/work/main"],
+            command=_linux_timeout_command(80, ["/work/main"]),
         ),
         cwd=temp_dir,
         timeout=90,

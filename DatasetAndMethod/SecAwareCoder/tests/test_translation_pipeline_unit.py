@@ -226,6 +226,26 @@ def test_insecure_validation_prompt_treats_matching_bad_behavior_as_success():
     assert "must not pass because it is safe" in lowered or "if the vulnerability is fixed" in lowered
 
 
+def test_insecure_validation_prompt_uses_one_expected_error_oracle():
+    from translation_pipeline.prompts import build_validation_program_prompt
+
+    prompt = build_validation_program_prompt(
+        problem="bad XML parser",
+        entry_point="parse_xml",
+        source_code="def parse_xml(x): return unsafe_parse(x)",
+        translated_code="public static Object parse_xml(String x) { return unsafeParse(x); }",
+        python_test="def check(candidate): assert_raises(candidate, dangerous_xml)",
+        target_language="Java",
+        mode="insecure",
+    )
+
+    lowered = prompt.lower()
+
+    assert "expected unsafe/error behavior" in lowered
+    assert "do not create separate function and security pass requirements" in lowered
+    assert "false secure" in lowered
+
+
 def test_cpp_prompts_warn_against_recursive_variant_aliases():
     translation_prompt = build_translation_prompt(
         problem="parse json",

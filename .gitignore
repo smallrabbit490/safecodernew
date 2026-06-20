@@ -2,6 +2,7 @@
 .env
 .env.*
 *.env
+env.local.ps1
 *.key
 *apikey*
 *api_key*
@@ -45,6 +46,11 @@ translation_work/sandbox/
 translation_work/temp/
 translation_work/logs/
 translation_work/scripts/
+translation_work/monitored_full_run/logs/
+translation_work/monitored_full_run/*.txt
+translation_work/monitored_full_run/*.json
+translation_work/admin_tools/*.log
+translation_work/admin_tools/*.diskpart.txt
 translation_work/**/*.guarded_tmp/
 translation_work/**/*.validated.guarded_tmp/
 translation_work/**/*.validated.*.json
