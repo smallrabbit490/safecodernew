@@ -125,7 +125,10 @@ def cwe_from_id(task_id: str) -> str:
 def normalize_cwe(cwe: str) -> str:
     cwe = str(cwe)
     m = re.search(r"(\d+)", cwe)
-    return m.group(1) if m else cwe
+    if not m:
+        return cwe
+    digits = m.group(1)
+    return str(int(digits)) if digits.isdigit() else digits
 
 
 def code_excerpt(code: str, limit: int = 900) -> str:
@@ -155,6 +158,12 @@ def select_secodeplt_train(rows: list[dict], n: int = 30) -> list[dict]:
     def usable(row: dict) -> bool:
         gt = row.get("ground_truth") or {}
         return bool(gt.get("vulnerable_code") and gt.get("patched_code"))
+
+    if n <= 0:
+        return sorted(
+            [row for row in rows if usable(row)],
+            key=lambda r: int(r.get("index", 10**9)),
+        )
 
     by_cwe: dict[str, list[dict]] = {}
     for row in rows:
@@ -214,7 +223,7 @@ def plus_cwe(row: dict) -> str:
     task_id = row.get("ID", "")
     if task_id.startswith("CWE-862/"):
         return "862"
-    return cwe_from_id(task_id)
+    return normalize_cwe(cwe_from_id(task_id))
 
 
 def select_codeseceval_test(plus_rows: list[dict], n: int = 10, requested_ids: list[str] | None = None) -> list[dict]:
@@ -497,7 +506,8 @@ def prepare(se_train_size: int = 30, code_train_size: int = 30, test_size: int =
     se_memory = summarize_memory(se_cards, "SeCodePLT")
     code_memory = summarize_memory(code_cards, "CodeSecEval")
 
-    write_json(out_dir / "data" / f"secodeplt_train{se_train_size}.json", se_train)
+    se_train_label = f"all{len(se_train)}" if se_train_size <= 0 else str(se_train_size)
+    write_json(out_dir / "data" / f"secodeplt_train{se_train_label}.json", se_train)
     write_json(out_dir / "data" / f"codeseceval_train{code_train_size}.json", code_train)
     write_json(out_dir / "data" / f"codeseceval_test{test_size}.json", test)
     write_json(out_dir / "memory" / "secodeplt_memory.json", se_cards)
@@ -514,7 +524,8 @@ def prepare(se_train_size: int = 30, code_train_size: int = 30, test_size: int =
         "secodeplt_cards": se_cards,
         "codeseceval_cards": code_cards,
         "out_dir": out_dir,
-        "se_train_size": se_train_size,
+        "se_train_size": len(se_train),
+        "se_train_size_requested": se_train_size,
         "code_train_size": code_train_size,
         "test_size": test_size,
     }
